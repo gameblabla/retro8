@@ -13,7 +13,11 @@
 
 namespace r8 = retro8;
 using pixel_t =
+#ifdef _8BPP
+uint8_t;
+#else
 uint16_t;
+#endif
 
 std::future<void> _initFuture;
 
@@ -40,6 +44,8 @@ SDL_Surface *real_screen;
 #endif
 SDL_Surface *sdl_screen;
 
+SDL_Color colors[256];
+
 struct ColorMapper
 {
 	r8::gfx::ColorTable::pixel_t operator()(uint8_t r, uint8_t g, uint8_t b) const
@@ -48,6 +54,43 @@ struct ColorMapper
 	}
 };
 
+#ifdef _8BPP
+
+static void Set_Pal_col(uint8_t r, uint8_t g, uint8_t b, uint16_t entry)
+{
+	if (entry > 255) return;
+	colors[entry].r = r;
+	colors[entry].g = g;
+	colors[entry].b = b;
+}
+
+void Set_palette(void)
+{
+	Set_Pal_col(0, 0, 0, 0);
+	Set_Pal_col(11, 17, 32, 1);
+	Set_Pal_col(49, 14, 32, 2);
+	Set_Pal_col(0, 60, 32, 3);
+		
+	Set_Pal_col(67, 32, 21, 4);
+	Set_Pal_col(37, 34, 31, 5);
+	Set_Pal_col(76, 76, 78, 6);
+	Set_Pal_col(100, 94, 94, 7);
+		
+	Set_Pal_col(100, 0, 32, 8);
+	Set_Pal_col(100, 64, 0, 9);
+	Set_Pal_col(100, 92, 15, 10);
+	Set_Pal_col(0, 89, 21, 11);
+		
+	Set_Pal_col(16, 68, 100, 12);
+		
+	Set_Pal_col(51, 46, 61, 13);
+	Set_Pal_col(100, 47, 65, 14);
+	Set_Pal_col(100, 80, 67, 15);
+
+	SDL_SetPalette(sdl_screen, SDL_LOGPAL|SDL_PHYSPAL, colors, 0, 16);
+}
+
+#endif
 
 uint32_t Platform::getTicks() { return SDL_GetTicks(); }
 
@@ -235,7 +278,14 @@ int main(int argc, char* argv[])
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
 	SDL_ShowCursor(0);
 	#ifdef IPU_SCALING
-	sdl_screen = SDL_SetVideoMode(128, 128, sizeof(pixel_t) * 8, SDL_FLAGS);
+	sdl_screen = SDL_SetVideoMode(128, 128, sizeof(pixel_t) * 8, SDL_FLAGS
+#ifdef RS90
+	| SDL_YUV444
+#endif
+	);
+	#ifdef _8BPP
+	Set_palette();
+	#endif
 	#else
 	sdl_screen = SDL_CreateRGBSurface(SDL_HWSURFACE, 128, 128, sizeof(pixel_t) * 8, 0,0,0,0);
 	real_screen = SDL_SetVideoMode(320, 240, sizeof(pixel_t) * 8, SDL_FLAGS);

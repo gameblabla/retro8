@@ -171,13 +171,13 @@ void flip_screen()
 	/* Of course this assumes that the actual screen refresh rate is 60 or close to it.
 	 * Most games are 30 FPS though. I'm not aware of any 60 fps games aside from one
 	 * which only works on Picolove. - Gameblabla */
-	/*if (fps != 60)
+	if (fps != 60)
 	{
 		uint32_t now = timer_ms_gettime64()-start;
 		if (now - lastFrameTick < 1000.0/fps)
 			thd_sleep(1000.0/fps - (now - lastFrameTick));
 		lastFrameTick = timer_ms_gettime64()-start;
-	}*/
+	}
 }
 
 

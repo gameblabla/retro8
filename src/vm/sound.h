@@ -5,7 +5,9 @@
 
 #include <array>
 #include <vector>
+#ifndef NOMUTEX
 #include <mutex>
+#endif
 
 #if SOUND_ENABLED
 
@@ -200,7 +202,9 @@ namespace retro8
       std::array<SoundState, CHANNEL_COUNT> channels;
       MusicState mstate;
 
+	  #ifndef NOMUTEX
       std::mutex queueMutex;
+      #endif
       std::vector<Command> queue;
 
       bool _soundEnabled, _musicEnabled;

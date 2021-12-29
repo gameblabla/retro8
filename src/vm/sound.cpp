@@ -164,8 +164,6 @@ constexpr float ORGAN_DEFAULT_COEFFICIENT = 0.5f;
 size_t position = 0;
 int16_t* rendered = nullptr;
 
-
-
 void APU::init()
 {
   static_assert(sizeof(SoundSample) == 2, "Must be 2 bytes");
@@ -175,21 +173,31 @@ void APU::init()
 
 void APU::play(sound_index_t index, channel_index_t channel, uint32_t start, uint32_t end)
 {
+  #ifndef NOMUTEX
   queueMutex.lock();
+  #endif
   queue.emplace_back(index, channel, start, end);
+  #ifndef NOMUTEX
   queueMutex.unlock();
+  #endif
 }
 
 void APU::music(music_index_t index, int32_t fadeMs, int32_t mask)
 {
+  #ifndef NOMUTEX
   queueMutex.lock();
+  #endif
   queue.emplace_back(index, fadeMs, mask);
+  #ifndef NOMUTEX
   queueMutex.unlock();
+  #endif
 }
 
 void APU::handleCommands()
 {
+  #ifndef NOMUTEX
   if (queueMutex.try_lock())
+  #endif
   {
     for (Command& c : queue)
     {
@@ -271,7 +279,9 @@ void APU::handleCommands()
     }
 
     queue.clear();
+    #ifndef NOMUTEX
     queueMutex.unlock();
+    #endif
   }
 
   /* stop sound on channel*/
@@ -413,7 +423,7 @@ void APU::renderSounds(int16_t* dest, size_t totalSamples)
         {
           /* generate the maximum amount of samples available for same note */
           // TODO: optimize if next note is equal to current
-          size_t available = std::min(samples, samplePerTick - (channel.position % samplePerTick));
+          size_t available = std::min(samples, static_cast<size_t>(samplePerTick - (channel.position % samplePerTick)));
           renderSound(channel, buffer, available);
 
           samples -= available;

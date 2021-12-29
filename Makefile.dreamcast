@@ -1,0 +1,46 @@
+CC	= kos-cc
+CXX	= kos-c++
+
+CFLAGS		= -Wall -Wextra -Ofast -fdata-sections -ffunction-sections
+CFLAGS		+= -DLSB_FIRST -DALIGN_DWORD -DDREAMCAST -DNOMUTEX
+CFLAGS		+= -Isrc/gen -Isrc -Isrc/io -Isrc/lua -Isrc/dc -Isrc/vm
+CXXFLAGS = $(CFLAGS) -std=gnu++17
+#LDFLAGS = -lSDL -ltremor -lm -lz
+
+#Including OPUS Libraries
+LDFLAGS = -lc -lm -lSDL -lz -s -flto -Wl,--as-needed -Wl,--gc-sections
+
+DEFINES = -Wall
+OUTPUT = retro8_dc.elf
+
+SRCDIR		=  ./src/gen ./src/io ./src/lua ./src/dc ./src/vm ./src/sound
+VPATH		= $(SRCDIR)
+SRC_C		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.c))
+SRC_CP		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.cpp))
+OBJ_C		= $(notdir $(patsubst %.c, %.o, $(SRC_C)))
+OBJ_CP		= $(notdir $(patsubst %.cpp, %.o, $(SRC_CP)))
+OBJS		= $(OBJ_C) $(OBJ_CP)
+
+all: ${OUTPUT}
+
+${OUTPUT}: ${OBJS}
+	${CXX} -o ${OUTPUT} ${OBJS} ${CXXFLAGS} ${LDFLAGS} ${DEFINES} 
+
+pack_unused_cdda:
+	rm -f IP.BIN
+	sh-elf-objcopy -R .stack -O binary $(OUTPUT) main.bin
+	${KOS_BASE}/utils/scramble/scramble main.bin ./cd/1ST_READ.BIN
+	makeip ip.txt IP.BIN
+	mkisofs -C 0,$(shell lbacalc track1.raw track2.raw track3.raw) -V OVERHEATED -G IP.BIN -joliet -rock -l -o "overheated.iso" ./cd
+	mds4dc -c retro8.mds retro8.iso track1.raw track2.raw track3.raw
+	
+pack:
+	rm -f IP.BIN
+	sh-elf-objcopy -R .stack -O binary $(OUTPUT) main.bin
+	${KOS_BASE}/utils/scramble/scramble main.bin ./cd/1ST_READ.BIN
+	makeip ip.txt IP.BIN
+	mkisofs -V retro8 -G IP.BIN -joliet -rock -l -x cd -o "retro8.iso" ./cd
+	cdi4dc retro8.iso retro8.cdi -d
+	
+clean:
+	rm *.o *.img src/*.o src/sdl/*.o src/dc/*.o src/enemies/*.o ${OUTPUT} *.BIN *.iso *.mds *.mdf

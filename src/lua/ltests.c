@@ -195,20 +195,20 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
 
 
 static void printobj (global_State *g, GCObject *o) {
-  printf("||%s(%p)-%c(%02X)||",
+ /* printf("||%s(%p)-%c(%02X)||",
            ttypename(novariant(o->tt)), (void *)o,
-           isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', o->marked);
+           isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', o->marked);*/
 }
 
 
 static int testobjref (global_State *g, GCObject *f, GCObject *t) {
   int r1 = testobjref1(g, f, t);
   if (!r1) {
-    printf("%d(%02X) - ", g->gcstate, g->currentwhite);
+    //printf("%d(%02X) - ", g->gcstate, g->currentwhite);
     printobj(g, f);
-    printf("  ->  ");
+    //printf("  ->  ");
     printobj(g, t);
-    printf("\n");
+   // printf("\n");
   }
   return r1;
 }
@@ -559,10 +559,10 @@ static void printstack (lua_State *L) {
   int i;
   int n = lua_gettop(L);
   for (i = 1; i <= n; i++) {
-    printf("%3d: %s\n", i, luaL_tolstring(L, i, NULL));
+    //printf("%3d: %s\n", i, luaL_tolstring(L, i, NULL));
     lua_pop(L, 1);
   }
-  printf("\n");
+  //printf("\n");
 }
 
 
@@ -1233,7 +1233,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
     else if EQ("print") {
       int n = getnum;
       if (n != 0) {
-        printf("%s\n", luaL_tolstring(L1, n, NULL));
+        //printf("%s\n", luaL_tolstring(L1, n, NULL));
         lua_pop(L1, 1);
       }
       else printstack(L1);

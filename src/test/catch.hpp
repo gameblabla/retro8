@@ -15446,11 +15446,6 @@ namespace Catch {
 
         // Save previous errno, to prevent sprintf from overwriting it
         ErrnoGuard guard;
-#ifdef _MSC_VER
-        sprintf_s(buffer, "%.3f", duration);
-#else
-        std::sprintf(buffer, "%.3f", duration);
-#endif
         return std::string(buffer);
     }
 

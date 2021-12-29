@@ -4,6 +4,9 @@
 #include "lua/lua.hpp"
 #include "gen/lua_api.h"
 
+// Not defined for some reasons
+#define lua_to_or_default(L, w, i, d) lua_gettop(L) >= i ? lua_to ## w(L, i) : d  
+
 #include <functional>
 #include <iostream>
 #include <fstream>
@@ -233,6 +236,11 @@ int palt(lua_State* L)
   }
   return 0;
 }
+ #define CCC_min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
 
 namespace draw
 {
@@ -247,7 +255,7 @@ namespace draw
       uint8_t w = lua_tonumber(L, 3);
       uint8_t h = lua_tonumber(L, 4);
 
-      machine.memory().clipRect()->set(x0, y0, std::min(x0 + w, int32_t(gfx::SCREEN_WIDTH-1)), std::min(y0 + h, int32_t(gfx::SCREEN_HEIGHT-1)));
+      machine.memory().clipRect()->set(x0, y0, CCC_min(x0 + w, int32_t(gfx::SCREEN_WIDTH-1)), CCC_min(y0 + h, int32_t(gfx::SCREEN_HEIGHT-1)));
     }
 
     return 0;
@@ -502,7 +510,7 @@ namespace math
     return 0;
   }
 
-#define FAIL_IF_NOT_NUMBER(i) do { if (!lua_isnumber(L, i)) { printf("Expected number but got %s\n", lua_typename(L, i)); assert(false); } } while (false)
+#define FAIL_IF_NOT_NUMBER(i) /*do { if (!lua_isnumber(L, i)) { printf("Expected number but got %s\n", lua_typename(L, i)); assert(false); } } while (false)*/
 
   int rnd(lua_State* L)
   {

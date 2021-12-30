@@ -44,7 +44,6 @@ static unsigned start = timer_ms_gettime64();
 
 #define PACK_ARGB8888(a,r,g,b) ( ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF) )
 
-uint32_t pal_rgb[16];
 uint8_t pal_r[16];
 uint8_t pal_g[16];
 uint8_t pal_b[16];
@@ -58,7 +57,7 @@ struct ColorMapper
 		{
 			if (pal_r[i] == r && pal_g[i] == g && pal_b[i] == b)
 			{
-				return pal_rgb[i];
+				return PACK_ARGB8888(255,r,g,b);
 			}
 		}
 		return 0;
@@ -67,11 +66,10 @@ struct ColorMapper
 
 static void Set_Pal_col(uint8_t r, uint8_t g, uint8_t b, uint16_t entry)
 {
-	pal_rgb[entry] = PACK_ARGB8888(255,r,g,b);
 	pal_r[entry] = r;
 	pal_g[entry] = g;
 	pal_b[entry] = b;
-	pvr_set_pal_entry(entry, pal_rgb[entry]);
+	pvr_set_pal_entry(entry, PACK_ARGB8888(255,r,g,b));
 }
 
 void Set_palette(void)
@@ -128,8 +126,7 @@ void back_init()
 void draw_back()
 {
 #ifdef _8BPP
-    pvr_txr_load_dma(mem, tmp_tex, 128*128, 1, NULL, NULL);
-	pvr_txr_load_ex(tmp_tex, front_tex, 128, 128, PVR_TXRLOAD_8BPP);
+	pvr_txr_load_ex(mem, front_tex, 128, 128, PVR_TXRLOAD_8BPP);
 #else
     pvr_txr_load_dma(mem, tmp_tex, 128*128*2, 1, NULL, NULL);
 #endif
@@ -142,8 +139,7 @@ void draw_back()
     //PVR_TXRFMT_PAL8BPP
     #ifdef _8BPP
 	pvr_set_pal_format(PVR_TXRFMT_PAL8BPP);
-
-    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL8BPP|PVR_TXRFMT_TWIDDLED|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
+    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL8BPP| PVR_TXRFMT_8BPP_PAL(0)|PVR_TXRFMT_TWIDDLED|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
     #else
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565|PVR_TXRFMT_NONTWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
 	#endif

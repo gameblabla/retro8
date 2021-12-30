@@ -23,6 +23,7 @@ uint16_t;
 #endif
 
 pixel_t* mem;
+pixel_t* targetdata;
 
 uint32_t frameCounter = 0;
 uint32_t lastFrameTick = 0;
@@ -133,12 +134,13 @@ void deinit()
 
 pvr_ptr_t back_tex;
 pvr_ptr_t front_tex;
-
+pvr_ptr_t tmp_tex;
 void back_init()
 {
 #ifdef _8BPP
     back_tex = pvr_mem_malloc(128*128);
     front_tex = pvr_mem_malloc(128*128);
+    tmp_tex = pvr_mem_malloc(128*128);
 #else
     back_tex = pvr_mem_malloc(128*128*2);
     front_tex = pvr_mem_malloc(128*128*2);
@@ -149,9 +151,10 @@ void back_init()
 void draw_back()
 {
 #ifdef _8BPP
-    pvr_txr_load_dma(mem, front_tex, 128*128, 1, NULL, NULL);
+    pvr_txr_load_dma(mem, tmp_tex, 128*128, 1, NULL, NULL);
+	pvr_txr_load_ex(tmp_tex, front_tex, 128, 128, PVR_TXRLOAD_8BPP);
 #else
-    pvr_txr_load_dma(mem, front_tex, 128*128*2, 1, NULL, NULL);
+    pvr_txr_load_dma(mem, tmp_tex, 128*128*2, 1, NULL, NULL);
 #endif
 	//pvr_txr_load (mem, front_tex, 128*128*2);    
     
@@ -161,8 +164,9 @@ void draw_back()
    
     //PVR_TXRFMT_PAL8BPP
     #ifdef _8BPP
-	pvr_set_pal_format(PVR_TXRFMT_PAL4BPP);
-    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL4BPP|PVR_TXRFMT_NONTWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
+	pvr_set_pal_format(PVR_TXRFMT_PAL8BPP);
+
+    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL8BPP|PVR_TXRFMT_TWIDDLED|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_TRILINEAR2);
     #else
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565|PVR_TXRFMT_NONTWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
 	#endif
@@ -414,7 +418,8 @@ int main(int argc, char* argv[])
 	
 #ifdef _8BPP
 	mem = (pixel_t*)memalign(32, (128 * 128));
-	pvr_set_pal_format(PVR_TXRFMT_PAL4BPP);
+	targetdata = (pixel_t*)memalign(32, (128 * 128));
+	pvr_set_pal_format(PVR_TXRFMT_PAL8BPP);
 #else
 	mem = (pixel_t*)memalign(32, (128 * 128) * 2);
 #endif

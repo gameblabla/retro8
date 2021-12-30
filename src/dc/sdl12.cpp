@@ -15,7 +15,12 @@
 #include <dc/maple/controller.h>
 
 namespace r8 = retro8;
-using pixel_t = uint16_t;
+using pixel_t =
+#ifdef _8BPP
+uint8_t;
+#else
+uint16_t;
+#endif
 
 pixel_t* mem;
 
@@ -34,6 +39,74 @@ int16_t* audioBuffer;
 static unsigned start = timer_ms_gettime64();
 
 
+#ifdef _8BPP
+int32_t entries_count = -1;
+uint32_t entries_pal[16] =
+{
+	0,
+	37,
+	101,
+	17,
+	169,
+	15,
+	182,
+	255,
+	225,
+	240,
+	248,
+	25,
+	55,
+	142,
+	238,
+	250
+};
+
+
+struct ColorMapper
+{
+	r8::gfx::ColorTable::pixel_t operator()(uint8_t r, uint8_t g, uint8_t b) const
+	{
+		entries_count++;
+		return entries_pal[entries_count];
+	}
+};
+
+
+uint32_t pal_[16];
+static void Set_Pal_col(uint8_t r, uint8_t g, uint8_t b, uint16_t entry)
+{
+	if (entry > 255) return;
+	pal_[entry] = r | g | b;
+	pvr_set_pal_entry(entry, pal_[entry]);
+}
+
+void Set_palette(void)
+{
+	Set_Pal_col(0, 0, 0, 0);
+	Set_Pal_col(11, 17, 32, 1);
+	Set_Pal_col(49, 14, 32, 2);
+	Set_Pal_col(0, 60, 32, 3);
+		
+	Set_Pal_col(67, 32, 21, 4);
+	Set_Pal_col(37, 34, 31, 5);
+	Set_Pal_col(76, 76, 78, 6);
+	Set_Pal_col(100, 94, 94, 7);
+		
+	Set_Pal_col(100, 0, 32, 8);
+	Set_Pal_col(100, 64, 0, 9);
+	Set_Pal_col(100, 92, 15, 10);
+	Set_Pal_col(0, 89, 21, 11);
+		
+	Set_Pal_col(16, 68, 100, 12);
+		
+	Set_Pal_col(51, 46, 61, 13);
+	Set_Pal_col(100, 47, 65, 14);
+	Set_Pal_col(100, 80, 67, 15);
+
+	//SDL_SetPalette(sdl_screen, SDL_LOGPAL|SDL_PHYSPAL, colors, 0, 16);
+}
+#else
+
 struct ColorMapper
 {
 	r8::gfx::ColorTable::pixel_t operator()(uint8_t r, uint8_t g, uint8_t b) const
@@ -44,6 +117,8 @@ struct ColorMapper
 		return (uint16_t) (red | green | blue);
 	}
 };
+
+#endif
 
 uint32_t Platform::getTicks() { return timer_ms_gettime64()-start; }
 
@@ -61,22 +136,36 @@ pvr_ptr_t front_tex;
 
 void back_init()
 {
+#ifdef _8BPP
+    back_tex = pvr_mem_malloc(128*128);
+    front_tex = pvr_mem_malloc(128*128);
+#else
     back_tex = pvr_mem_malloc(128*128*2);
     front_tex = pvr_mem_malloc(128*128*2);
+#endif
 }
 
 /* draw background */
 void draw_back()
 {
-    //pvr_txr_load_dma(mem, front_tex, 128*128*2, 1);
-	pvr_txr_load (mem, front_tex, 128*128*2);    
+#ifdef _8BPP
+    pvr_txr_load_dma(mem, front_tex, 128*128, 1, NULL, NULL);
+#else
+    pvr_txr_load_dma(mem, front_tex, 128*128*2, 1, NULL, NULL);
+#endif
+	//pvr_txr_load (mem, front_tex, 128*128*2);    
     
     pvr_poly_cxt_t cxt;
     pvr_poly_hdr_t hdr;
     pvr_vertex_t vert;
-    
-    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565|PVR_TXRFMT_NONTWIDDLED, 128, 128, front_tex, PVR_FILTER_BILINEAR);
-                      
+   
+    //PVR_TXRFMT_PAL8BPP
+    #ifdef _8BPP
+	pvr_set_pal_format(PVR_TXRFMT_PAL4BPP);
+    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL4BPP|PVR_TXRFMT_NONTWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
+    #else
+	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565|PVR_TXRFMT_NONTWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
+	#endif
     pvr_poly_compile(&hdr, &cxt);
     pvr_prim(&hdr, sizeof(hdr));
 
@@ -323,8 +412,12 @@ int main(int argc, char* argv[])
 	snd_stream_hnd_t snd_dc = -1;
 	int res = 0, while_res = 1;
 	
-	mem = (pixel_t*)malloc((128 * 128) * 2);
-	
+#ifdef _8BPP
+	mem = (pixel_t*)memalign(32, (128 * 128));
+	pvr_set_pal_format(PVR_TXRFMT_PAL4BPP);
+#else
+	mem = (pixel_t*)memalign(32, (128 * 128) * 2);
+#endif
 	pvr_setup();
 
 	/* TODO : Get rid of SDL dependency for Sound */

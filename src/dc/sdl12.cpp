@@ -23,7 +23,6 @@ uint16_t;
 #endif
 
 pixel_t* mem;
-pixel_t* targetdata;
 
 uint32_t frameCounter = 0;
 uint32_t lastFrameTick = 0;
@@ -42,8 +41,13 @@ static unsigned start = timer_ms_gettime64();
 
 #ifdef _8BPP
 
+#ifdef _32BPP_PAL
 #define PACK_ARGB8888(a,r,g,b) ( ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF) )
+#else
+#define RGB565(r, g, b) (unsigned short)((r << 11) + (g << 5) + b)
+#endif
 
+uint32_t pal_rgb[16];
 uint8_t pal_r[16];
 uint8_t pal_g[16];
 uint8_t pal_b[16];
@@ -57,7 +61,7 @@ struct ColorMapper
 		{
 			if (pal_r[i] == r && pal_g[i] == g && pal_b[i] == b)
 			{
-				return PACK_ARGB8888(255,r,g,b);
+				return pal_rgb[i];
 			}
 		}
 		return 0;
@@ -66,10 +70,20 @@ struct ColorMapper
 
 static void Set_Pal_col(uint8_t r, uint8_t g, uint8_t b, uint16_t entry)
 {
+	int i;
 	pal_r[entry] = r;
 	pal_g[entry] = g;
 	pal_b[entry] = b;
-	pvr_set_pal_entry(entry, PACK_ARGB8888(255,r,g,b));
+	#ifdef _32BPP_PAL
+	pal_rgb[entry] = PACK_ARGB8888(255,r,g,b);
+	#else
+	pal_rgb[entry] = RGB565(r,g,b);
+	#endif
+	
+	for(i=0;i<16;i++)
+	{
+		pvr_set_pal_entry(entry+(16*i), pal_rgb[entry]);
+	}
 }
 
 void Set_palette(void)
@@ -109,13 +123,11 @@ void deinit()
 
 pvr_ptr_t back_tex;
 pvr_ptr_t front_tex;
-pvr_ptr_t tmp_tex;
 void back_init()
 {
 #ifdef _8BPP
     back_tex = pvr_mem_malloc(128*128);
     front_tex = pvr_mem_malloc(128*128);
-    tmp_tex = pvr_mem_malloc(128*128);
 #else
     back_tex = pvr_mem_malloc(128*128*2);
     front_tex = pvr_mem_malloc(128*128*2);
@@ -128,9 +140,8 @@ void draw_back()
 #ifdef _8BPP
 	pvr_txr_load_ex(mem, front_tex, 128, 128, PVR_TXRLOAD_8BPP);
 #else
-    pvr_txr_load_dma(mem, tmp_tex, 128*128*2, 1, NULL, NULL);
+    pvr_txr_load_dma(mem, front_tex, 128*128*2, 1, NULL, NULL);
 #endif
-	//pvr_txr_load (mem, front_tex, 128*128*2);    
     
     pvr_poly_cxt_t cxt;
     pvr_poly_hdr_t hdr;
@@ -138,8 +149,7 @@ void draw_back()
    
     //PVR_TXRFMT_PAL8BPP
     #ifdef _8BPP
-	pvr_set_pal_format(PVR_TXRFMT_PAL8BPP);
-    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL8BPP| PVR_TXRFMT_8BPP_PAL(0)|PVR_TXRFMT_TWIDDLED|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
+    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL8BPP| PVR_TXRFMT_8BPP_PAL(0)|PVR_TXRFMT_TWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
     #else
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565|PVR_TXRFMT_NONTWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
 	#endif
@@ -388,16 +398,18 @@ int main(int argc, char* argv[])
 {
 	snd_stream_hnd_t snd_dc = -1;
 	int res = 0, while_res = 1;
-	
+	pvr_setup();
 #ifdef _8BPP
+	#ifdef _32BPP_PAL
+	pvr_set_pal_format(PVR_PAL_ARGB8888);
+	#else
+	pvr_set_pal_format(PVR_PAL_RGB565);
+	#endif
 	mem = (pixel_t*)memalign(32, (128 * 128));
-	targetdata = (pixel_t*)memalign(32, (128 * 128));
-	pvr_set_pal_format(PVR_TXRFMT_PAL8BPP);
 	Set_palette();
 #else
 	mem = (pixel_t*)memalign(32, (128 * 128) * 2);
 #endif
-	pvr_setup();
 
 	/* TODO : Get rid of SDL dependency for Sound */
 	SDL_Init(SDL_INIT_AUDIO);

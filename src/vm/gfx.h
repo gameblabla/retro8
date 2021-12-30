@@ -5,10 +5,19 @@
 #include <array>
 #include <cassert>
 
+
 namespace retro8
 {
   namespace gfx
   {
+	static uint8_t pico8_pal[16][3] =
+	{
+		{  0,   0,   0}, { 29,  43,  83}, {126,  37,  83}, {  0, 135,  81},
+		{171,  82,  54}, { 95,  87,  79}, {194, 195, 199}, {255, 241, 232},
+		{255,   0,  77}, {255, 163,   0}, {255, 236,  39}, {  0, 228,  54},
+		{ 41, 173, 255}, {131, 118, 156}, {255, 119, 168}, {255, 204, 170}
+	};
+	  
     static constexpr size_t PIXEL_TO_BYTE_RATIO = 2;
 
     static constexpr size_t SPRITE_WIDTH = 8;
@@ -57,17 +66,8 @@ namespace retro8
       template<typename B>
       void init(const B& mapper)
       {
-        struct rgb_color_t { uint8_t r, g, b; };
-
-        constexpr std::array<rgb_color_t, COLOR_COUNT> colors = { {
-          {  0,   0,   0}, { 29,  43,  83}, {126,  37,  83}, {  0, 135,  81},
-          {171,  82,  54}, { 95,  87,  79}, {194, 195, 199}, {255, 241, 232},
-          {255,   0,  77}, {255, 163,   0}, {255, 236,  39}, {  0, 228,  54},
-          { 41, 173, 255}, {131, 118, 156}, {255, 119, 168}, {255, 204, 170}
-        } };
-
         for (size_t i = 0; i < COLOR_COUNT; ++i)
-          table[i] = mapper(colors[i].r, colors[i].g, colors[i].b);
+          table[i] = mapper(pico8_pal[i][0], pico8_pal[i][1], pico8_pal[i][2]);
       }
       pixel_t get(color_t c) const { return table[c]; }
     };

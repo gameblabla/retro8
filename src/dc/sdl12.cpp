@@ -41,71 +41,48 @@ static unsigned start = timer_ms_gettime64();
 
 
 #ifdef _8BPP
-int32_t entries_count = -1;
-uint32_t entries_pal[16] =
-{
-	0,
-	37,
-	101,
-	17,
-	169,
-	15,
-	182,
-	255,
-	225,
-	240,
-	248,
-	25,
-	55,
-	142,
-	238,
-	250
-};
 
+#define PACK_ARGB8888(a,r,g,b) ( ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF) )
+
+uint32_t pal_rgb[16];
+uint8_t pal_r[16];
+uint8_t pal_g[16];
+uint8_t pal_b[16];
 
 struct ColorMapper
 {
 	r8::gfx::ColorTable::pixel_t operator()(uint8_t r, uint8_t g, uint8_t b) const
 	{
-		entries_count++;
-		return entries_pal[entries_count];
+		uint_fast8_t i;
+		for(i=0;i<16;i++)
+		{
+			if (pal_r[i] == r && pal_g[i] == g && pal_b[i] == b)
+			{
+				return pal_rgb[i];
+			}
+		}
+		return 0;
 	}
 };
 
-
-uint32_t pal_[16];
 static void Set_Pal_col(uint8_t r, uint8_t g, uint8_t b, uint16_t entry)
 {
-	if (entry > 255) return;
-	pal_[entry] = r | g | b;
-	pvr_set_pal_entry(entry, pal_[entry]);
+	pal_rgb[entry] = PACK_ARGB8888(255,r,g,b);
+	pal_r[entry] = r;
+	pal_g[entry] = g;
+	pal_b[entry] = b;
+	pvr_set_pal_entry(entry, pal_rgb[entry]);
 }
 
 void Set_palette(void)
 {
-	Set_Pal_col(0, 0, 0, 0);
-	Set_Pal_col(11, 17, 32, 1);
-	Set_Pal_col(49, 14, 32, 2);
-	Set_Pal_col(0, 60, 32, 3);
-		
-	Set_Pal_col(67, 32, 21, 4);
-	Set_Pal_col(37, 34, 31, 5);
-	Set_Pal_col(76, 76, 78, 6);
-	Set_Pal_col(100, 94, 94, 7);
-		
-	Set_Pal_col(100, 0, 32, 8);
-	Set_Pal_col(100, 64, 0, 9);
-	Set_Pal_col(100, 92, 15, 10);
-	Set_Pal_col(0, 89, 21, 11);
-		
-	Set_Pal_col(16, 68, 100, 12);
-		
-	Set_Pal_col(51, 46, 61, 13);
-	Set_Pal_col(100, 47, 65, 14);
-	Set_Pal_col(100, 80, 67, 15);
-
-	//SDL_SetPalette(sdl_screen, SDL_LOGPAL|SDL_PHYSPAL, colors, 0, 16);
+	uint_fast8_t i;
+	for(i=0;i<16;i++)
+	{
+		Set_Pal_col(retro8::gfx::pico8_pal[i][0], retro8::gfx::pico8_pal[i][1], retro8::gfx::pico8_pal[i][2], i);
+	}
 }
+
 #else
 
 struct ColorMapper
@@ -166,7 +143,7 @@ void draw_back()
     #ifdef _8BPP
 	pvr_set_pal_format(PVR_TXRFMT_PAL8BPP);
 
-    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL8BPP|PVR_TXRFMT_TWIDDLED|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_TRILINEAR2);
+    pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL8BPP|PVR_TXRFMT_TWIDDLED|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
     #else
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565|PVR_TXRFMT_NONTWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_BILINEAR);
 	#endif
@@ -420,6 +397,7 @@ int main(int argc, char* argv[])
 	mem = (pixel_t*)memalign(32, (128 * 128));
 	targetdata = (pixel_t*)memalign(32, (128 * 128));
 	pvr_set_pal_format(PVR_TXRFMT_PAL8BPP);
+	Set_palette();
 #else
 	mem = (pixel_t*)memalign(32, (128 * 128) * 2);
 #endif

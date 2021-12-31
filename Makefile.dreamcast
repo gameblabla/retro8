@@ -1,16 +1,14 @@
 CC	= kos-cc
 CXX	= kos-c++
 
-CFLAGS		= -Wall -Wextra -Ofast -fdata-sections -ffunction-sections
-CFLAGS		+= -DLSB_FIRST -DALIGN_DWORD -DDREAMCAST -DNOMUTEX -D_8BPP
+CFLAGS		= -Wall -Wextra -O2 -ffast-math -fdata-sections -ffunction-sections -flto
+CFLAGS		+= -DLSB_FIRST -DALIGN_DWORD -DDREAMCAST -DNOMUTEX -D_8BPP -DSDL_SOUND_DC
 CFLAGS		+= -Isrc/gen -Isrc -Isrc/io -Isrc/lua -Isrc/dc -Isrc/vm
 CXXFLAGS = $(CFLAGS) -std=gnu++17
 #LDFLAGS = -lSDL -ltremor -lm -lz
 
 #Including OPUS Libraries
 LDFLAGS = -lc -lm -lSDL -lz -s -flto -Wl,--as-needed -Wl,--gc-sections
-
-DEFINES = -Wall
 OUTPUT = retro8_dc.elf
 
 SRCDIR		=  ./src/gen ./src/io ./src/lua ./src/dc ./src/vm ./src/sound
@@ -24,7 +22,7 @@ OBJS		= $(OBJ_C) $(OBJ_CP)
 all: ${OUTPUT}
 
 ${OUTPUT}: ${OBJS}
-	${CXX} -o ${OUTPUT} ${OBJS} ${CXXFLAGS} ${LDFLAGS} ${DEFINES} 
+	${CXX} ${CXXFLAGS} -o ${OUTPUT} ${OBJS} ${LDFLAGS} 
 
 pack_unused_cdda:
 	rm -f IP.BIN

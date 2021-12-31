@@ -2,7 +2,7 @@ CC	= kos-cc
 CXX	= kos-c++
 
 CFLAGS		= -Wall -Wextra -Ofast -fdata-sections -ffunction-sections
-CFLAGS		+= -DLSB_FIRST -DALIGN_DWORD -DDREAMCAST -DNOMUTEX
+CFLAGS		+= -DLSB_FIRST -DALIGN_DWORD -DDREAMCAST -DNOMUTEX -D_8BPP
 CFLAGS		+= -Isrc/gen -Isrc -Isrc/io -Isrc/lua -Isrc/dc -Isrc/vm
 CXXFLAGS = $(CFLAGS) -std=gnu++17
 #LDFLAGS = -lSDL -ltremor -lm -lz
@@ -31,7 +31,7 @@ pack_unused_cdda:
 	sh-elf-objcopy -R .stack -O binary $(OUTPUT) main.bin
 	${KOS_BASE}/utils/scramble/scramble main.bin ./cd/1ST_READ.BIN
 	makeip ip.txt IP.BIN
-	mkisofs -C 0,$(shell lbacalc track1.raw track2.raw track3.raw) -V OVERHEATED -G IP.BIN -joliet -rock -l -o "overheated.iso" ./cd
+	mkisofs -C 0,$(shell lbacalc track1.raw track2.raw track3.raw) -V OVERHEATED -G IP.BIN -joliet -rock -l -o "retro8.iso" ./cd
 	mds4dc -c retro8.mds retro8.iso track1.raw track2.raw track3.raw
 	
 pack:

@@ -11,6 +11,11 @@
 #include <future>
 #include <SDL/SDL.h>
 
+#ifdef DREAMCAST
+#include <kos.h>
+#include <SDL/SDL_dreamcast.h>
+#endif
+
 namespace r8 = retro8;
 using pixel_t =
 #ifdef _8BPP
@@ -18,8 +23,6 @@ uint8_t;
 #else
 uint16_t;
 #endif
-
-std::future<void> _initFuture;
 
 uint32_t frameCounter = 0;
 uint32_t lastFrameTick = 0;
@@ -66,27 +69,11 @@ static void Set_Pal_col(uint8_t r, uint8_t g, uint8_t b, uint16_t entry)
 
 void Set_palette(void)
 {
-	Set_Pal_col(0, 0, 0, 0);
-	Set_Pal_col(11, 17, 32, 1);
-	Set_Pal_col(49, 14, 32, 2);
-	Set_Pal_col(0, 60, 32, 3);
-		
-	Set_Pal_col(67, 32, 21, 4);
-	Set_Pal_col(37, 34, 31, 5);
-	Set_Pal_col(76, 76, 78, 6);
-	Set_Pal_col(100, 94, 94, 7);
-		
-	Set_Pal_col(100, 0, 32, 8);
-	Set_Pal_col(100, 64, 0, 9);
-	Set_Pal_col(100, 92, 15, 10);
-	Set_Pal_col(0, 89, 21, 11);
-		
-	Set_Pal_col(16, 68, 100, 12);
-		
-	Set_Pal_col(51, 46, 61, 13);
-	Set_Pal_col(100, 47, 65, 14);
-	Set_Pal_col(100, 80, 67, 15);
-
+	uint_fast8_t i;
+	for(i=0;i<16;i++)
+	{
+		Set_Pal_col(retro8::gfx::pico8_pal[i][0], retro8::gfx::pico8_pal[i][1], retro8::gfx::pico8_pal[i][2], i);
+	}
 	SDL_SetPalette(sdl_screen, SDL_LOGPAL|SDL_PHYSPAL, colors, 0, 16);
 }
 
@@ -211,6 +198,8 @@ void audio_callback(void* data, uint8_t* cbuffer, int length)
 uint_fast8_t retro_run()
 {
 	Uint32 start;
+	
+#ifndef DREAMCAST
 	SDL_Event Event;
 
 	/* manage input */
@@ -257,6 +246,62 @@ uint_fast8_t retro_run()
 			break;
 		}
 	}
+#else
+	int i;
+    maple_device_t *cont;
+	cont_state_t *state;
+	
+	int ret=0;		
+	cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+		
+	if(cont)
+	{
+		state = (cont_state_t *)maple_dev_status(cont);
+		if (!state)
+		ret = 0;
+		
+			if (state->buttons & CONT_START)
+				input.manageKey(1, 4, 1);
+			else
+				input.manageKey(1, 4, 0);
+				
+			if (state->buttons & CONT_X)
+				input.manageKey(1, 5, 1);
+			else
+				input.manageKey(1, 5, 0);
+					
+			if (state->buttons & CONT_A) 
+				input.manageKey(0, 4, 1);
+			else
+				input.manageKey(0, 4, 0);
+				
+			if (state->buttons & CONT_B) 
+				input.manageKey(0, 5, 1);
+			else
+				input.manageKey(0, 5, 0);
+				
+			if (state->buttons & CONT_DPAD_UP) 
+				input.manageKey(0, 2, 1);
+			else
+				input.manageKey(0, 2, 0);
+				
+			if (state->buttons & CONT_DPAD_DOWN) 
+				input.manageKey(0, 3, 1);
+			else
+				input.manageKey(0, 3, 0);
+				
+			if (state->buttons & CONT_DPAD_LEFT) 
+				input.manageKey(0, 0, 1);
+			else
+				input.manageKey(0, 0, 0);
+				
+			if (state->buttons & CONT_DPAD_RIGHT) 
+				input.manageKey(0, 1, 1);
+			else
+				input.manageKey(0, 1, 0);
+				
+	}
+#endif
 
 	input.tick();
 
@@ -274,7 +319,7 @@ int main(int argc, char* argv[])
 {
 	int res = 0, while_res = 1;
 	audioBuffer = new int16_t[SAMPLE_RATE * 2];
-	
+
 	SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
 	SDL_ShowCursor(0);
 	#ifdef IPU_SCALING
@@ -317,11 +362,20 @@ int main(int argc, char* argv[])
 	machine.code().loadAPI();
 	input.setMachine(&machine);
 	
+#ifdef DREAMCAST
+	res = load_game("/cd/game.p8.png");
+	if (!res)
+	{
+		res = load_game("/cd/game.p8");
+		if (!res) return 0;
+	}
+#else
 	if (argc != 2) {
 		printf("Usage: %s GAME_ROM\n", argv[0]);
 		return 1;
 	}
 	res = load_game(argv[1]);
+#endif
 	if (!res)
 	{
 		printf("Could not load game '%s'!\n", argv[1]);

@@ -38,6 +38,8 @@ int16_t* audioBuffer;
 
 static unsigned start = timer_ms_gettime64();
 
+#define _32BPP_PAL 1
+
 
 #ifdef _8BPP
 
@@ -61,7 +63,7 @@ struct ColorMapper
 		{
 			if (pal_r[i] == r && pal_g[i] == g && pal_b[i] == b)
 			{
-				return pal_rgb[i];
+				return i;
 			}
 		}
 		return 0;

@@ -111,18 +111,41 @@ inline void DSP::organWave(uint32_t frequency, int16_t amplitude, int16_t offset
 
 inline void DSP::noise(uint32_t frequency, int16_t amplitude, int32_t position, int16_t* dest, size_t samples)
 {
-  static std::random_device rdevice;
-  static std::mt19937 mt(rdevice());
-
-  std::uniform_int_distribution<int16_t> dist(-amplitude/2, amplitude/2);
-
-  const size_t periodLength = float(rate) / frequency;
-  const size_t halfPeriod = periodLength / 2;
+  static uint32_t lfsr_state = 0x12345678;
+  static const uint8_t poly = 0x34; // second-smallest maximal-period polynomial.
+  static const int trailing_zeros = 2; // 2 trailing 0.
+  static const int significant_bits = 4; // 4 bits from highest set to lowest set
+  static const int batch = 4; // Batch to handle in a table
+  static const int table_size = 1 << (batch + significant_bits);
+  static const int table_mask = table_size - 1;
+  static uint8_t polytable[table_size];
+  
+  if (!amplitude)
+    return;
+  
+  if (polytable[1] == 0) {
+    for (size_t i = 1; i < table_size; ++i)
+    {
+      uint32_t cur = i << trailing_zeros;
+      for (int j = 0; j < batch; j++)
+      {
+	uint8_t parity = cur & poly;
+	parity ^= parity >> 4;
+	parity ^= parity >> 2;
+	parity ^= parity >> 1;
+	cur = (cur >> 1) | ((parity & 1) << 31);
+      }
+      polytable[i] = cur >> (32 - batch);
+    }
+  }
 
   for (size_t i = 0; i < samples; ++i)
   {
-    const auto sampleInPeriod = position % periodLength;
-    dest[i] += dist(mt);
+    dest[i] += lfsr_state % amplitude - (amplitude / 2);
+    lfsr_state = (lfsr_state >> batch) | (polytable[(lfsr_state >> significant_bits) & table_mask] << (32 - batch));
+    lfsr_state = (lfsr_state >> batch) | (polytable[(lfsr_state >> significant_bits) & table_mask] << (32 - batch));
+    lfsr_state = (lfsr_state >> batch) | (polytable[(lfsr_state >> significant_bits) & table_mask] << (32 - batch));
+    lfsr_state = (lfsr_state >> batch) | (polytable[(lfsr_state >> significant_bits) & table_mask] << (32 - batch));
     ++position;
   }
 }
@@ -399,9 +422,6 @@ void APU::renderSound(const SoundState& channel, int16_t* buffer, size_t samples
 void APU::renderSounds(int16_t* dest, size_t totalSamples)
 {
   handleCommands();
-
-  constexpr size_t rate = 44100;
-  constexpr int16_t maxVolume = 4096;
 
   memset(dest, 0, sizeof(int16_t)*totalSamples);
 

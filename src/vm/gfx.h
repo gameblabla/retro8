@@ -74,7 +74,7 @@ namespace retro8
     };
 
     
-    static color_t colorForRGB(uint32_t color)
+	static inline color_t colorForRGB(uint32_t color)
     {
       switch (color & 0x00ffffff)
       {
@@ -210,7 +210,7 @@ namespace retro8
 
     public:
       Font() { }
-      inline const sequential_sprite_t* glyph(char c) const { return c < 128 ? &glyphs[c] : nullptr; }
+      inline const sequential_sprite_t* glyph(char c) const { return (unsigned) c < 128 ? &glyphs[(unsigned) c] : nullptr; }
       inline const sequential_sprite_t* specialGlyph(size_t i) const { return &glyphs[128+i]; }
 
       void load();

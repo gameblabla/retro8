@@ -53,6 +53,14 @@ struct ColorMapper
 {
 	r8::gfx::ColorTable::pixel_t operator()(uint8_t r, uint8_t g, uint8_t b) const
 	{
+		//printf("%d,\n", SDL_MapRGB(sdl_screen->format, r, g, b));
+		
+#ifdef ABGR1555
+      return ((b & 0xf8) << 7) | ((g & 0xf8) << 2) | ((r & 0xf8) >> 3);
+#else
+      return ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | ((b & 0xf8) >> 3);
+#endif
+		
 		return SDL_MapRGB(sdl_screen->format, r, g, b);
 	}
 };
@@ -69,11 +77,27 @@ static void Set_Pal_col(uint8_t r, uint8_t g, uint8_t b, uint16_t entry)
 
 void Set_palette(void)
 {
-	uint_fast8_t i;
-	for(i=0;i<16;i++)
-	{
-		Set_Pal_col(retro8::gfx::pico8_pal[i][0], retro8::gfx::pico8_pal[i][1], retro8::gfx::pico8_pal[i][2], i);
-	}
+	Set_Pal_col(0, 0, 0, 0);
+	Set_Pal_col(11, 17, 32, 1);
+	Set_Pal_col(49, 14, 32, 2);
+	Set_Pal_col(0, 60, 32, 3);
+		
+	Set_Pal_col(67, 32, 21, 4);
+	Set_Pal_col(37, 34, 31, 5);
+	Set_Pal_col(76, 76, 78, 6);
+	Set_Pal_col(100, 94, 94, 7);
+		
+	Set_Pal_col(100, 0, 32, 8);
+	Set_Pal_col(100, 64, 0, 9);
+	Set_Pal_col(100, 92, 15, 10);
+	Set_Pal_col(0, 89, 21, 11);
+		
+	Set_Pal_col(16, 68, 100, 12);
+		
+	Set_Pal_col(51, 46, 61, 13);
+	Set_Pal_col(100, 47, 65, 14);
+	Set_Pal_col(100, 80, 67, 15);
+
 	SDL_SetPalette(sdl_screen, SDL_LOGPAL|SDL_PHYSPAL, colors, 0, 16);
 }
 

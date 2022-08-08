@@ -230,7 +230,6 @@ int palt(lua_State* L)
   {
     color_t c = color_t(int(lua_tonumber(L, 1)));
     int f = lua_toboolean(L, 2);
-    palette_index_t index = gfx::DRAW_PALETTE_INDEX;
 
     machine.memory().paletteAt(gfx::DRAW_PALETTE_INDEX)->transparent(c, f);
   }
@@ -850,8 +849,10 @@ namespace platform
     uint8_t value = lua_tonumber(L, 2);
     int32_t length = lua_tonumber(L, 3);
 
+	// Fix memset - phcoder
+	// https://github.com/libretro/retro8/commit/2c02a37b65d0a7324aae56c2f83a281d925f6217
     if (length > 0)
-      std::memset(machine.memory().base() + addr, 0, length);
+		std::memset(machine.memory().base() + addr, value, length);
 
     return 0;
   }

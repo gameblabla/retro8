@@ -165,8 +165,9 @@ void Stegano::load20(const PngData& data, Machine& m)
   auto* d = data.data;
   size_t o = RAW_DATA_LENGTH + MAGIC_LENGTH;
 
-  size_t decompressedLength = assembleByte(d[o++]) << 8 | assembleByte(d[o++]);
-  size_t compressedLength = assembleByte(d[o++]) << 8 | assembleByte(d[o++]);
+  size_t decompressedLength = assembleByte(d[o]) << 8 | assembleByte(d[o+1]);
+  size_t compressedLength = assembleByte(d[o+2]) << 8 | assembleByte(d[o+3]);
+  o += 4;
   compressedLength -= HEADER_20_LENGTH; /* subtract header length */
 
   compressedLength = std::min(size_t(32769ULL - RAW_DATA_LENGTH), compressedLength);

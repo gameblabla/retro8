@@ -317,8 +317,8 @@ void audio_callback(void* data, uint8_t* cbuffer, int length)
 	return;
 }
 #else
-static int16_t sound_buffer[SAMPLE_RATE * 2];
-static void *sound_callback(snd_stream_hnd_t hnd, int len, int *actual)
+static int16_t sound_buffer[SND_STREAM_BUFFER_MAX];
+static void *sound_callback(snd_stream_hnd_t hnd, int len, int *samples_returned)
 {
 	machine.sound().renderSounds(sound_buffer, len / sizeof(int16_t));
 	return (int16_t *)(sound_buffer);
@@ -449,7 +449,7 @@ int main(int argc, char* argv[])
 	}
 	#ifndef SDL_SOUND_DC
     snd_stream_init();
-    snd_dc = snd_stream_alloc(sound_callback, SAMPLE_RATE * 2);
+    snd_dc = snd_stream_alloc(sound_callback, SND_STREAM_BUFFER_MAX);
 	snd_stream_start(snd_dc,44100, 0);
 	#endif
 		

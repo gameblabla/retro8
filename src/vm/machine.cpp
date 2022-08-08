@@ -183,7 +183,6 @@ void Machine::circfill(coord_t xc, coord_t yc, amount_t r, color_t color)
   float d = 3 - 2 * r;
   circFillHelper(xc, yc, x, y, color);
 
-  int ctr = 0;
   while (y >= x)
   {
     x++;

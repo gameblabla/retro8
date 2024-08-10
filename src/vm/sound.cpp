@@ -1,5 +1,5 @@
-#include "sound.h"
-
+#include "dc.h"
+#include "memory.h"
 #include "memory.h"
 
 #include <random>
@@ -11,9 +11,8 @@ using namespace retro8::sfx;
 
 inline void DSP::squareWave(uint32_t frequency, int16_t amplitude, int16_t offset, int32_t position, int16_t* dest, size_t samples)
 {
-  const size_t periodLength = float(rate) / frequency;
-  const size_t halfPeriod = periodLength / 2;
-
+  const size_t periodLength = DIVIDE_REAL(float(rate), frequency);
+  const size_t halfPeriod = DIVIDE_REAL(periodLength, 2);
   for (size_t i = 0; i < samples; ++i)
   {
     const auto sampleInPeriod = position % periodLength;
@@ -24,9 +23,8 @@ inline void DSP::squareWave(uint32_t frequency, int16_t amplitude, int16_t offse
 
 inline void DSP::pulseWave(uint32_t frequency, int16_t amplitude, int16_t offset, float dutyCycle, int32_t position, int16_t* dest, size_t samples)
 {
-  const size_t periodLength = float(rate) / frequency;
-  const size_t dutyOnLength = dutyCycle * periodLength;
-
+  const size_t periodLength = DIVIDE_REAL(float(rate), frequency);
+  const size_t dutyOnLength = DIVIDE_REAL(dutyCycle, periodLength);
   for (size_t i = 0; i < samples; ++i)
   {
     const auto sampleInPeriod = position % periodLength;
@@ -55,8 +53,7 @@ inline void DSP::triangleWave(uint32_t frequency, int16_t amplitude, int16_t off
 
 inline void DSP::sawtoothWave(uint32_t frequency, int16_t amplitude, int16_t offset, int32_t position, int16_t* dest, size_t samples)
 {
-  const size_t periodLength = float(rate) / frequency;
-
+  const size_t periodLength = DIVIDE_REAL(float(rate), frequency);
   for (size_t i = 0; i < samples; ++i)
   {
     const size_t repetitions = position / periodLength;
@@ -68,8 +65,7 @@ inline void DSP::sawtoothWave(uint32_t frequency, int16_t amplitude, int16_t off
 
 inline void DSP::tiltedSawtoothWave(uint32_t frequency, int16_t amplitude, int16_t offset, float dutyCycle, int32_t position, int16_t* dest, size_t samples)
 {
-  const size_t periodLength = float(rate) / frequency;
-
+  const size_t periodLength = DIVIDE_REAL(float(rate), frequency);
   for (size_t i = 0; i < samples; ++i)
   {
     const size_t repetitions = position / periodLength;
@@ -89,21 +85,21 @@ inline void DSP::tiltedSawtoothWave(uint32_t frequency, int16_t amplitude, int16
 
 inline void DSP::organWave(uint32_t frequency, int16_t amplitude, int16_t offset, float coefficient, int32_t position, int16_t* dest, size_t samples)
 {
-  const size_t periodLength = float(rate) / frequency;
-
+  const size_t periodLength = DIVIDE_REAL(float(rate), frequency);
   for (size_t i = 0; i < samples; ++i)
   {
     const size_t repetitions = position / periodLength;
     const float p = position / float(periodLength) - repetitions;
 
     if (p < 0.25f) // drop +a -a
-      dest[i] += offset + amplitude - amplitude * 2 * (p / 0.25f);
+      dest[i] += offset + amplitude - amplitude * 2 * DIVIDE_REAL(p, 0.25f);
     else if (p < 0.50f) // raise -a +c
-      dest[i] += offset - amplitude + amplitude * (1.0f + coefficient) * (p - 0.25) / 0.25;
+      dest[i] += offset - amplitude + amplitude * (1.0f + coefficient) * DIVIDE_REAL((p - 0.25), 0.25);
     else if (p < 0.75) // drop +c -a
-      dest[i] += offset + amplitude * coefficient - amplitude * (1.0f + coefficient) * (p - 0.50) / 0.25f;
+      dest[i] += offset + amplitude * coefficient - amplitude * (1.0f + coefficient) * DIVIDE_REAL((p - 0.50), 0.25f);
     else
-      dest[i] += offset - amplitude + amplitude * 2 * (p - 0.75f) / 0.25f;
+      dest[i] += offset - amplitude + amplitude * 2 * DIVIDE_REAL((p - 0.75f),0.25f);
+
 
     ++position;
   }
@@ -141,7 +137,7 @@ inline void DSP::noise(uint32_t frequency, int16_t amplitude, int32_t position, 
 
   for (size_t i = 0; i < samples; ++i)
   {
-    dest[i] += lfsr_state % amplitude - (amplitude / 2);
+	dest[i] += lfsr_state % amplitude - (DIVIDE_REAL(amplitude, 2));
     lfsr_state = (lfsr_state >> batch) | (polytable[(lfsr_state >> significant_bits) & table_mask] << (32 - batch));
     lfsr_state = (lfsr_state >> batch) | (polytable[(lfsr_state >> significant_bits) & table_mask] << (32 - batch));
     lfsr_state = (lfsr_state >> batch) | (polytable[(lfsr_state >> significant_bits) & table_mask] << (32 - batch));
@@ -152,22 +148,20 @@ inline void DSP::noise(uint32_t frequency, int16_t amplitude, int32_t position, 
 
 void DSP::fadeIn(int16_t amplitude, int16_t* dest, size_t samples)
 {
-  const float incr = 1.0f / samples;
-
+  const float incr = DIVIDE_REAL(1.0f,samples);
   for (size_t i = 0; i < samples; ++i)
   {
-    const float v = dest[i] / amplitude;
+    const float v = DIVIDE_REAL(dest[i], amplitude);
     dest[i] = v * incr * i * amplitude;
   }
 }
 
 void DSP::fadeOut(int16_t amplitude, int16_t* dest, size_t samples)
 {
-  const float incr = 1.0f / samples;
-
+  const float incr = DIVIDE_REAL(1.0f,samples);
   for (size_t i = 0; i < samples; ++i)
   {
-    const float v = dest[i] / amplitude;
+    const float v = DIVIDE_REAL(dest[i], amplitude);
     dest[i] = v * incr * (samples - i - 1) * amplitude;
   }
 }
@@ -389,7 +383,8 @@ void APU::renderSound(const SoundState& channel, int16_t* buffer, size_t samples
   const SoundSample& sample = channel.sound->samples[channel.sample];
 
   constexpr int16_t maxVolume = 4096;
-  const int16_t volume = (maxVolume / 8) * sample.volume();
+  const int16_t volume = DIVIDE_REAL(maxVolume, 8) * sample.volume();
+  
   const frequency_t frequency = Note::frequency(sample.pitch());
 
   /* render samples */

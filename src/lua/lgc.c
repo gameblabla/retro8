@@ -25,6 +25,8 @@
 #include "ltable.h"
 #include "ltm.h"
 
+#include "dc.h"
+
 
 /*
 ** internal state for collector while inside the atomic phase. The
@@ -778,8 +780,8 @@ static GCObject **sweeptolive (lua_State *L, GCObject **p) {
 static void checkSizes (lua_State *L, global_State *g) {
   if (g->gckind != KGC_EMERGENCY) {
     l_mem olddebt = g->GCdebt;
-    if (g->strt.nuse < g->strt.size / 4)  /* string table too big? */
-      luaS_resize(L, g->strt.size / 2);  /* shrink it a little */
+    if (g->strt.nuse < DIVIDE_REAL(g->strt.size, 4))  /* string table too big? */
+      luaS_resize(L, DIVIDE_REAL(g->strt.size, 2));  /* shrink it a little */
     g->GCestimate += g->GCdebt - olddebt;  /* update estimate */
   }
 }
@@ -939,9 +941,9 @@ void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt) {
 */
 static void setpause (global_State *g) {
   l_mem threshold, debt;
-  l_mem estimate = g->GCestimate / PAUSEADJ;  /* adjust 'estimate' */
+  l_mem estimate = DIVIDE_REAL(g->GCestimate , PAUSEADJ);  /* adjust 'estimate' */
   lua_assert(estimate > 0);
-  threshold = (g->gcpause < MAX_LMEM / estimate)  /* overflow? */
+  threshold = (g->gcpause < DIVIDE_REAL(MAX_LMEM, estimate))  /* overflow? */
             ? estimate * g->gcpause  /* no overflow */
             : MAX_LMEM;  /* overflow; truncate to maximum */
   debt = gettotalbytes(g) - threshold;
@@ -1117,8 +1119,8 @@ static l_mem getdebt (global_State *g) {
   int stepmul = g->gcstepmul;
   if (debt <= 0) return 0;  /* minimal debt */
   else {
-    debt = (debt / STEPMULADJ) + 1;
-    debt = (debt < MAX_LMEM / stepmul) ? debt * stepmul : MAX_LMEM;
+    debt = (DIVIDE_REAL(debt , STEPMULADJ)) + 1;
+    debt = (debt < DIVIDE_REAL(MAX_LMEM , stepmul)) ? debt * stepmul : MAX_LMEM;
     return debt;
   }
 }
@@ -1140,7 +1142,7 @@ void luaC_step (lua_State *L) {
   if (g->gcstate == GCSpause)
     setpause(g);  /* pause until next cycle */
   else {
-    debt = (debt / g->gcstepmul) * STEPMULADJ;  /* convert 'work units' to Kb */
+    debt = (DIVIDE_REAL(debt , g->gcstepmul)) * STEPMULADJ;  /* convert 'work units' to Kb */
     luaE_setdebt(g, debt);
     runafewfinalizers(L);
   }

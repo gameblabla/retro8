@@ -19,6 +19,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "dc.h"
+
 
 /*
 ** Operations that an object must define to mimic a table
@@ -344,7 +346,7 @@ static IdxT partition (lua_State *L, IdxT lo, IdxT up) {
 ** "randomized" by 'rnd'
 */
 static IdxT choosePivot (IdxT lo, IdxT up, unsigned int rnd) {
-  IdxT r4 = (up - lo) / 4;  /* range/4 */
+  IdxT r4 = DIVIDE_REAL((up - lo) , 4);  /* range/4 */
   IdxT p = rnd % (r4 * 2) + (lo + r4);
   lua_assert(lo + r4 <= p && p <= up - r4);
   return p;
@@ -402,7 +404,7 @@ static void auxsort (lua_State *L, IdxT lo, IdxT up,
       n = up - p;  /* size of smaller interval */
       up = p - 1;  /* tail call for [lo .. p - 1]  (lower interval) */
     }
-    if ((up - lo) / 128 > n) /* partition too imbalanced? */
+    if (DIVIDE_REAL((up - lo) , 128) > n) /* partition too imbalanced? */
       rnd = l_randomizePivot();  /* try a new randomization */
   }  /* tail call auxsort(L, lo, up, rnd) */
 }

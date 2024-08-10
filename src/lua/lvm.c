@@ -30,6 +30,8 @@
 #include "ltm.h"
 #include "lvm.h"
 
+#include "dc.h"
+
 
 /* limit for table tag-method chains (to avoid loops) */
 #define MAXTAGLOOP	2000
@@ -556,7 +558,7 @@ lua_Integer luaV_div (lua_State *L, lua_Integer m, lua_Integer n) {
     return intop(-, 0, m);   /* n==-1; avoid overflow with 0x80000...//-1 */
   }
   else {
-    lua_Integer q = m / n;  /* perform C division */
+    lua_Integer q = DIVIDE_REAL(m , n);  /* perform C division */
     if ((m ^ n) < 0 && m % n != 0)  /* 'm/n' would be negative non-integer? */
       q -= 1;  /* correct result for different rounding */
     return q;

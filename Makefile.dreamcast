@@ -1,17 +1,17 @@
 CC	= kos-cc
 CXX	= kos-c++
 
-CFLAGS		= -Wall -Wextra -O2 -ffast-math -fdata-sections -ffunction-sections -flto
-CFLAGS		+= -DLSB_FIRST -DALIGN_DWORD -DDREAMCAST -DNOMUTEX -D_8BPP -DSDL_SOUND_DC
-CFLAGS		+= -Isrc/gen -Isrc -Isrc/io -Isrc/lua -Isrc/dc -Isrc/vm
-CXXFLAGS = $(CFLAGS) -std=gnu++17
+CFLAGS		+= -Ofast -DLSB_FIRST -DALIGN_DWORD -DDREAMCAST -DNOMUTEX -DSDL_SOUND_DC
+CFLAGS		+= -Isrc/gen -Isrc -Isrc/io -Isrc/lua -Isrc/dc -Isrc/vm -Idc
+CXXFLAGS = -nodefaultlibs $(CFLAGS) -std=gnu++17 -fno-exceptions -fno-rtti
+
 #LDFLAGS = -lSDL -ltremor -lm -lz
 
 #Including OPUS Libraries
 LDFLAGS = -lc -lm -lSDL -lz -s -flto -Wl,--as-needed -Wl,--gc-sections
 OUTPUT = retro8_dc.elf
 
-SRCDIR		=  ./src/gen ./src/io ./src/lua ./src/dc ./src/vm ./src/sound
+SRCDIR		=  ./src/gen ./src/io ./src/lua ./src/dc ./src/vm ./src/sound ./dc
 VPATH		= $(SRCDIR)
 SRC_C		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.c))
 SRC_CP		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.cpp))

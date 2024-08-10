@@ -1,4 +1,5 @@
 #include "machine.h"
+#include "dc.h"
 
 #include <algorithm>
 
@@ -16,7 +17,7 @@ void Machine::cls(color_t color)
   gfx::color_byte_t value = gfx::color_byte_t(color, color);
 
   auto* data = _memory.screenData();
-  memset(data, value.value, gfx::BYTES_PER_SCREEN);
+  MEMSET_REAL(data, value.value, gfx::BYTES_PER_SCREEN);
 
   _memory.clipRect()->reset();
   *_memory.cursor() = { 0, 0 };
@@ -60,9 +61,9 @@ void Machine::line(coord_t x0, coord_t y0, coord_t x1, coord_t y1, color_t color
   }
   else
   {
-    coord_t dx = abs(x1 - x0);
+    coord_t dx = ABS_REAL(x1 - x0);
     coord_t sx = x0 < x1 ? 1 : -1;
-    coord_t dy = -abs(y1 - y0);
+    coord_t dy = -ABS_REAL(y1 - y0);
     coord_t sy = y0 < y1 ? 1 : -1;
     coord_t err = dx + dy;
 
@@ -116,10 +117,10 @@ void Machine::rectfill(coord_t x0, coord_t y0, coord_t x1, coord_t y1, color_t c
   x1 -= cx;
   y1 -= cy;
 
-  x0 = std::max(x0, coord_t(clip->x0));
-  x1 = std::min(x1, coord_t(clip->x1));
-  y0 = std::max(y0, coord_t(clip->y0));
-  y1 = std::min(y1, coord_t(clip->y1));
+  x0 = MAX_REAL(x0, coord_t(clip->x0));
+  x1 = MIN_REAL(x1, coord_t(clip->x1));
+  y0 = MAX_REAL(y0, coord_t(clip->y0));
+  y1 = MIN_REAL(y1, coord_t(clip->y1));
 
   color = _memory.paletteAt(gfx::DRAW_PALETTE_INDEX)->get(color_t(color % gfx::COLOR_COUNT));
 
@@ -245,8 +246,8 @@ void Machine::sspr(coord_t sx, coord_t sy, coord_t sw, coord_t sh, coord_t dx, c
   const gfx::palette_t* palette = _memory.paletteAt(gfx::DRAW_PALETTE_INDEX);
 
   float fx = sx, fy = sy;
-  float xr = sw / float(dw);
-  float yr = sh / float(dh);
+  float xr = DIVIDE_REAL(sw , float(dw));
+  float yr = DIVIDE_REAL(sh , float(dh));
 
   //TODO: flipx flipy, test ratio calculation
 

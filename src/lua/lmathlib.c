@@ -18,6 +18,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "dc.h"
+
 
 #undef PI
 #define PI	(l_mathop(3.141592653589793238462643383279502884))
@@ -202,12 +204,12 @@ static int math_exp (lua_State *L) {
 }
 
 static int math_deg (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1) * (l_mathop(180.0) / PI));
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (DIVIDE_REAL(l_mathop(180.0) , PI)));
   return 1;
 }
 
 static int math_rad (lua_State *L) {
-  lua_pushnumber(L, luaL_checknumber(L, 1) * (PI / l_mathop(180.0)));
+  lua_pushnumber(L, luaL_checknumber(L, 1) * (DIVIDE_REAL(PI , l_mathop(180.0))));
   return 1;
 }
 

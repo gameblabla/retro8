@@ -38,6 +38,8 @@
 #include "ltable.h"
 #include "lvm.h"
 
+#include "dc.h"
+
 
 /*
 ** Maximum size of array part (MAXASIZE) is 2^MAXABITS. MAXABITS is
@@ -224,7 +226,7 @@ static unsigned int computesizes (unsigned int nums[], unsigned int *pna) {
   unsigned int optimal = 0;  /* optimal size for array part */
   /* loop while keys can fill more than half of total size */
   for (i = 0, twotoi = 1;
-       twotoi > 0 && *pna > twotoi / 2;
+       twotoi > 0 && *pna > DIVIDE_REAL(twotoi , 2);
        i++, twotoi *= 2) {
     if (nums[i] > 0) {
       a += nums[i];
@@ -234,7 +236,7 @@ static unsigned int computesizes (unsigned int nums[], unsigned int *pna) {
       }
     }
   }
-  lua_assert((optimal == 0 || optimal / 2 < na) && na <= optimal);
+  lua_assert((optimal == 0 || DIVIDE_REAL(optimal , 2) < na) && na <= optimal);
   *pna = na;
   return optimal;
 }

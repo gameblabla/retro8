@@ -461,7 +461,7 @@ namespace math
     if (lua_isnumber(L, 1))
     {
       real_t angle = lua_tonumber(L, 1);
-      real_t value = std::cos(angle * 2 * PI);
+      real_t value = COS_REAL(angle * 2 * PI);
       lua_pushnumber(L, value);
     }
     else
@@ -475,7 +475,7 @@ namespace math
     if (lua_isnumber(L, 1))
     {
       real_t angle = lua_tonumber(L, 1);
-      real_t value = std::sin(-angle * 2 * PI);
+      real_t value = SIN_REAL(-angle * 2 * PI);
       lua_pushnumber(L, value);
     }
     else
@@ -489,7 +489,7 @@ namespace math
     assert(lua_isnumber(L, 1));
     real_t dx = lua_tonumber(L, 1);
     real_t dy = lua_tonumber(L, 2);
-    real_t value = std::atan2(dx, dy) / (2 * PI) - 0.25;
+    real_t value = DIVIDE_REAL(std::atan2(dx, dy), (2 * PI)) - 0.25;
     if (value < 0.0)
       value += 1.0;
 
@@ -514,22 +514,21 @@ namespace math
   int rnd(lua_State* L)
   {
     real_t max = lua_gettop(L) >= 1 ? lua_tonumber(L, 1) : 1.0f;
-    lua_pushnumber(L, (machine.state().rnd() / (float)machine.state().rnd.max()) * max);
-
+    lua_pushnumber(L, (DIVIDE_REAL(machine.state().rnd(), (float)machine.state().rnd.max()) * max));
     return 1;
   }
 
   int flr(lua_State* L)
   {
     real_t value = lua_isnumber(L, 1) ? lua_tonumber(L, 1) : 0;
-    lua_pushnumber(L, std::floor(value));
+    lua_pushnumber(L, FLOOR_REAL(value));
     return 1;
   }
 
   int ceil(lua_State* L)
   {
     real_t value = lua_isnumber(L, 1) ? lua_tonumber(L, 1) : 0;
-    lua_pushnumber(L, std::ceil(value));
+    lua_pushnumber(L, CEIL_REAL(value));
     return 1;
   }
 
@@ -542,7 +541,7 @@ namespace math
     if (lua_gettop(L) == 2 && lua_isnumber(L, 2))
       v2 = lua_tonumber(L, 2);
 
-    lua_pushnumber(L, std::min(v1, v2));
+    lua_pushnumber(L, MIN_REAL(v1, v2));
 
     return 1;
   }
@@ -558,7 +557,7 @@ namespace math
       v2 = lua_tonumber(L, 2);
     }
 
-    lua_pushnumber(L, std::max(v1, v2));
+    lua_pushnumber(L, MAX_REAL(v1, v2));
 
     return 1;
   }
@@ -584,7 +583,7 @@ namespace math
     if (lua_isnumber(L, 1))
     {
       real_t v = lua_tonumber(L, 1);
-      lua_pushnumber(L, std::abs(v));
+      lua_pushnumber(L, ABS_REAL(v));
     }
     else
       lua_pushnumber(L, 0);
@@ -607,7 +606,7 @@ namespace math
     assert(lua_isnumber(L, 1));
 
     real_t v = lua_tonumber(L, 1);
-    lua_pushnumber(L, sqrtf(v));
+    lua_pushnumber(L, SQRTF_REAL(v));
 
     return 1;
   }
@@ -720,10 +719,14 @@ namespace string
     size_t e = lua_to_or_default(L, number, 3, -1);
 
     size_t len = v.length();
+    
+    // Gameblabla - Always false apparently
+    #ifndef DREAMCAST
     if (s < 0)
       s = len - s + 1;
     if (e < 0)
       e = len - e + 1;
+    #endif
 
     // TODO: intended behavior? picotetris calls it with swapped indices
     if (e < s || s > len)
@@ -1002,7 +1005,7 @@ namespace platform
 
   int time(lua_State* L)
   {
-    lua_pushnumber(L, Platform::getTicks() / 1000.0f);
+	lua_pushnumber(L, DIVIDE_REAL(Platform::getTicks(), 1000.0f));
     return 1;
   }
 

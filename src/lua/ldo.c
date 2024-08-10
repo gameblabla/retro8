@@ -9,6 +9,8 @@
 
 #include "lprefix.h"
 
+#include "dc.h"
+
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -220,7 +222,7 @@ static int stackinuse (lua_State *L) {
 
 void luaD_shrinkstack (lua_State *L) {
   int inuse = stackinuse(L);
-  int goodsize = inuse + (inuse / 8) + 2*EXTRA_STACK;
+  int goodsize = inuse + (DIVIDE_REAL(inuse , 8)) + 2*EXTRA_STACK;
   if (goodsize > LUAI_MAXSTACK)
     goodsize = LUAI_MAXSTACK;  /* respect stack limit */
   if (L->stacksize > LUAI_MAXSTACK)  /* had been handling stack overflow? */

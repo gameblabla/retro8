@@ -9,6 +9,7 @@
 
 #include <array>
 #include <random>
+#include "dc.h"
 
 namespace retro8
 {
@@ -48,6 +49,7 @@ namespace retro8
 
     void cls(color_t color);
 
+	inline void direct_pset_noclip(coord_t x, coord_t y, color_t color);
     void pset(coord_t x, coord_t y, color_t color);
     color_t pget(coord_t x, coord_t y);
 

@@ -1,4 +1,5 @@
 #include "gfx.h"
+#include "dc.h"
 
 #include "gen/pico_font.h"
 
@@ -20,10 +21,10 @@ void Font::load()
   
   for (size_t i = 0; i < TOTAL_BYTES; ++i)
   {
-    const size_t row = i / BYTES_PER_ROW;
+    const size_t row = DIVIDE_REAL(i, BYTES_PER_ROW);
     const size_t col = i % FONT_GLYPHS_COLUMNS;
     const size_t index = row * FONT_GLYPHS_COLUMNS + col;
-    const size_t y = (i - (row * BYTES_PER_ROW)) / FONT_GLYPHS_COLUMNS;
+    const size_t y = DIVIDE_REAL((i - (row * BYTES_PER_ROW)), FONT_GLYPHS_COLUMNS);
 
     const auto byte = font_map[i];
     sequential_sprite_t& glyph = glyphs[index];

@@ -65,7 +65,8 @@ struct Platform
 #define LOGD(...)
 #endif
 
-#define R8_OPTS_ENABLED true
+// Disable for Dreamcast
+//#define R8_OPTS_ENABLED true
 #define R8_USE_LODE_PNG true
 
 #ifdef _WIN32

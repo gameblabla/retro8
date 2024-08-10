@@ -6959,7 +6959,7 @@ namespace Catch {
             }
 
             inline double normal_cdf(double x) {
-                return std::erfc(-x / std::sqrt(2.0)) / 2.0;
+                return std::erfc(-x / SQRT_REAL(2.0)) / 2.0;
             }
 
             double erfc_inv(double x);

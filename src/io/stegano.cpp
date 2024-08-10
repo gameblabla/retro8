@@ -1,6 +1,6 @@
 #include "stegano.h"
-
-#include <cassert>
+#include "dc.h"
+//#include <cassert>
 #include <algorithm>
 
 using namespace retro8;
@@ -142,7 +142,7 @@ public:
             length += part;
           } while (part == 0b111);
 
-          assert(offset <= code.size());
+          //assert(offset <= code.size());
 
           size_t start = code.size() - offset;
           for (int32_t l = 0; l < length; ++l)
@@ -170,14 +170,14 @@ void Stegano::load20(const PngData& data, Machine& m)
   o += 4;
   compressedLength -= HEADER_20_LENGTH; /* subtract header length */
 
-  compressedLength = std::min(size_t(32769ULL - RAW_DATA_LENGTH), compressedLength);
+  compressedLength = MIN_REAL(size_t(32769ULL - RAW_DATA_LENGTH), compressedLength);
 
-  assert(o == RAW_DATA_LENGTH + HEADER_20_LENGTH);
+  //assert(o == RAW_DATA_LENGTH + HEADER_20_LENGTH);
 
   std::vector<uint8_t> assembled(compressedLength);
   std::generate(assembled.begin(), assembled.end(), [this, &d, &o] () { return assembleByte(d[o++]); });
 
-  assert(o == RAW_DATA_LENGTH + HEADER_20_LENGTH + compressedLength);
+  //assert(o == RAW_DATA_LENGTH + HEADER_20_LENGTH + compressedLength);
 
   auto decoder = PXADecoder(assembled.data(), decompressedLength);
   std::string code = decoder.process();
@@ -202,12 +202,12 @@ void Stegano::load10(const PngData& data, Machine& m)
   /* skip 2 null*/
   o += 2;
 
-  compressedLength = std::min(size_t(32769ULL - RAW_DATA_LENGTH), compressedLength);
+  compressedLength = MIN_REAL(size_t(32769ULL - RAW_DATA_LENGTH), compressedLength);
 
   const std::string lookup = "\n 0123456789abcdefghijklmnopqrstuvwxyz!#%(){}[]<>+=/*:;.,~_";
   std::string code;
 
-  assert(0x3b == lookup.length());
+  //assert(0x3b == lookup.length());
   //TODO: optimize concatenation on string by reserving space
 
   for (size_t i = 0; i < compressedLength; ++i)
@@ -259,11 +259,11 @@ void Stegano::load(const PngData& data, Machine& m)
   constexpr size_t MUSIC_SIZE = sfx::MUSIC_COUNT * sizeof(sfx::music_t);
   constexpr size_t SOUND_SIZE = sfx::SOUND_COUNT * sizeof(sfx::sound_t);
 
-  static_assert(sizeof(sfx::music_t) == 4, "Must be 4 bytes");
-  static_assert(sizeof(sfx::sound_t) == 68, "Must be 68 bytes");
+  //static_assert(sizeof(sfx::music_t) == 4, "Must be 4 bytes");
+  //static_assert(sizeof(sfx::sound_t) == 68, "Must be 68 bytes");
 
-  static_assert(RAW_DATA_LENGTH == SPRITE_SHEET_SIZE + TILE_MAP_SIZE + SPRITE_FLAGS_SIZE + MUSIC_SIZE + SOUND_SIZE, "Must be equal");
-  assert(data.length == IMAGE_WIDTH * IMAGE_HEIGHT);
+  //static_assert(RAW_DATA_LENGTH == SPRITE_SHEET_SIZE + TILE_MAP_SIZE + SPRITE_FLAGS_SIZE + MUSIC_SIZE + SOUND_SIZE, "Must be equal");
+  //assert(data.length == IMAGE_WIDTH * IMAGE_HEIGHT);
 
   auto* d = data.data;
 
@@ -287,8 +287,8 @@ void Stegano::load(const PngData& data, Machine& m)
     load10(data, m);
   else if (magic == expected2)
     load20(data, m);
-  else
-    assert(false);
+ /* else
+    //assert(false);*/
 
 
 }

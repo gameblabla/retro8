@@ -150,7 +150,9 @@ void Machine::circ(coord_t xc, coord_t yc, amount_t r, color_t color)
 {
   //TODO: not identical to pico-8 but acceptable for now
   coord_t x = 0, y = r;
-  float d = 3 - 2 * r;
+  //float d = 3 - 2 * r;
+  float d = FMAC_DEC( r , 2 , 3);
+  
   circHelper(xc, yc, x, y, color);
 
   while (y >= x)
@@ -181,7 +183,7 @@ void Machine::circfill(coord_t xc, coord_t yc, amount_t r, color_t color)
 {
   //TODO: not identical to pico-8 but acceptable for now
   coord_t x = 0, y = r;
-  float d = 3 - 2 * r;
+  float d = FMAC_DEC( r , 2 , 3);
   circFillHelper(xc, yc, x, y, color);
 
   while (y >= x)
@@ -191,11 +193,12 @@ void Machine::circfill(coord_t xc, coord_t yc, amount_t r, color_t color)
     if (d > 0)
     {
       y--;
-      d = d + 3 * (x - y) + 5;
+      d = d + FMAC(3 , (x - y) , 5);
     }
     else
-      d = d + 3 * x + 3;
-
+    {
+	   d = d + FMAC(3 , x , 3);
+	}
     circFillHelper(xc, yc, x, y, color);
   }
 }

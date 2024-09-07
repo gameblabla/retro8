@@ -17,6 +17,7 @@
 #include <dc/maple/controller.h>
 
 #define _8BPP 1
+#define SDL_SOUND_DC 1
 
 #define FRAMEBUFFER_WIDTH 128
 #define FRAMEBUFFER_HEIGHT 128
@@ -353,6 +354,7 @@ bool load_game(char* rom_name)
 	snd_stream_hnd_t snd_dc = -1;
 
 
+#ifndef SDL_SOUND_DC
 int length = 1;
 const int SAMPLES_PER_FRAME = SAMPLE_RATE / 60;
 static int16_t* sound_buffer;
@@ -379,6 +381,7 @@ static void *sound_callback(snd_stream_hnd_t hnd, int smp_req, int *smp_recv) {
     // Return the buffer containing the decoded audio data
     return sound_buffer;
 }
+#endif
 
 uint_fast8_t retro_run()
 {
@@ -447,6 +450,17 @@ uint_fast8_t retro_run()
 }
 
 
+
+#ifdef SDL_SOUND_DC
+void audio_callback(void* data, uint8_t* cbuffer, int length)
+{
+	retro8::sfx::APU* apu = static_cast<retro8::sfx::APU*>(data);
+	int16_t* buffer = reinterpret_cast<int16_t*>(cbuffer);
+	apu->renderSounds(buffer, DIVIDE_REAL(length ,  sizeof(int16_t)));
+	return;
+}
+#else
+
 static void *dc_audio_thread(void *dud)
 {
     snd_stream_init();
@@ -473,7 +487,7 @@ static void *dc_audio_thread(void *dud)
 
   return NULL;
 }
-
+#endif
 
   
 int main(int argc, char* argv[])
@@ -521,18 +535,35 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
+	#ifdef SDL_SOUND_DC
+	SDL_Init(SDL_INIT_AUDIO);
+	SDL_AudioSpec wantSpec, spec;
+	wantSpec.freq = 44100;
+	wantSpec.format = AUDIO_S16SYS;
+	wantSpec.channels = 1;
+	wantSpec.samples = 2048;
+	wantSpec.userdata = &machine.sound();
+	wantSpec.callback = audio_callback;
+
+	SDL_OpenAudio(&wantSpec, &spec);
+	SDL_PauseAudio(0);
+	#else
 	sound_init = 0;
     sound_thread = thd_create(0, dc_audio_thread, NULL);
     while(sound_init == 0)
     {
 		
 	}
+	#endif
 		
 	while(while_res)
 	{
 		while_res = retro_run();
 	}
-	
+	#ifdef SDL_SOUND_DC
+	SDL_PauseAudio(1);
+	SDL_Quit();
+	#endif
 		
 	return 0;
 }

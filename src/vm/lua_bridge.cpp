@@ -145,7 +145,7 @@ int cls(lua_State* L)
 
 int spr(lua_State* L)
 {
-  assert(lua_isnumber(L, 2) && lua_isnumber(L, 3));
+  //assert(lua_isnumber(L, 2) && lua_isnumber(L, 3));
 
   int idx = lua_tonumber(L, 1);
   int x = lua_tonumber(L, 2);
@@ -153,7 +153,7 @@ int spr(lua_State* L)
 
   if (lua_gettop(L) > 3)
   {
-    assert(lua_gettop(L) >= 5);
+    //assert(lua_gettop(L) >= 5);
 
     real_t w = lua_tonumber(L, 4);
     real_t h = lua_tonumber(L, 5);
@@ -341,8 +341,8 @@ int print(lua_State* L)
 
     machine.print(text, x, y, static_cast<retro8::color_t>(c));
   }
-  else
-    assert(false);
+  /*else
+    assert(false);*/
 
 
   return 0;
@@ -398,7 +398,7 @@ namespace sprites
     if (lua_gettop(L) == 2)
     {
       int index = lua_tonumber(L, 2);
-      assert(index >= 0 && index <= 7);
+      //assert(index >= 0 && index <= 7);
       lua_pushboolean(L, (flags >> index) & 0x1 ? true : false);
     }
     else
@@ -416,7 +416,7 @@ namespace sprites
     {
       int index = lua_tonumber(L, 2);
       bool value = lua_toboolean(L, 3);
-      assert(index >= 0 && index <= 7);
+      //assert(index >= 0 && index <= 7);
 
       if (value)
         *flags = *flags | (1 << index);
@@ -486,7 +486,7 @@ namespace math
 
   int atan2(lua_State* L)
   {
-    assert(lua_isnumber(L, 1));
+    //assert(lua_isnumber(L, 1));
     real_t dx = lua_tonumber(L, 1);
     real_t dy = lua_tonumber(L, 2);
     real_t value = DIVIDE_REAL(std::atan2(dx, dy), (2 * PI)) - 0.25;
@@ -500,8 +500,8 @@ namespace math
 
   int srand(lua_State* L)
   {
-    assert(lua_gettop(L) == 1);
-    assert(lua_isnumber(L, 1));
+    //assert(lua_gettop(L) == 1);
+    //assert(lua_isnumber(L, 1));
 
     real_t seed = lua_tonumber(L, 1);
     machine.state().rnd.seed(seed);
@@ -593,7 +593,7 @@ namespace math
 
   int sgn(lua_State* L)
   {
-    assert(lua_isnumber(L, 1));
+    //assert(lua_isnumber(L, 1));
 
     real_t v = lua_tonumber(L, 1);
     lua_pushnumber(L, v > 0 ? 1.0 : -1.0);
@@ -603,7 +603,7 @@ namespace math
 
   int sqrt(lua_State* L)
   {
-    assert(lua_isnumber(L, 1));
+   // assert(lua_isnumber(L, 1));
 
     real_t v = lua_tonumber(L, 1);
     lua_pushnumber(L, SQRTF_REAL(v));
@@ -612,7 +612,7 @@ namespace math
   }
 }
 
-#define EXPECT_TYPE(tn, idx) do { if (!lua_is ## tn(L, idx)) std::cout << "expected " # tn << " but got " << lua_typename(L, idx) << std::endl; assert(false);} while (false)
+#define EXPECT_TYPE(tn, idx) do { if (!lua_is ## tn(L, idx)) std::cout << "expected " # tn << " but got " << lua_typename(L, idx) << std::endl; /*assert(false);*/} while (false)
 
 namespace bitwise
 {
@@ -674,7 +674,7 @@ namespace bitwise
 
   int bnot(lua_State* L)
   {
-    assert(lua_isnumber(L, 1));
+    //assert(lua_isnumber(L, 1));
 
     data_t a = lua_tonumber(L, 1);
 
@@ -880,7 +880,7 @@ namespace platform
 
   int reload(lua_State* L)
   {
-    assert(lua_gettop(L) <= 3);
+    //assert(lua_gettop(L) <= 3);
     
     address_t dest = lua_to_or_default(L, number, 1, 0);
     address_t src = lua_to_or_default(L, number, 1, 0);

@@ -28,6 +28,11 @@
 #define MEMSET_REAL memset
 #define MEMCPY_REAL memcpy
 
+#define SUPER_MEMCPY_REAL memcpy
+
+#define FMAC(a, b, c) ((a) * (b) + (c))
+#define FMAC_DEC(a, b, c) ((a) * (b) - (c))
+
 #else
 #include "sh4_math.h"
 #include <dc/fmath.h>
@@ -46,7 +51,12 @@
 	
 #define DIVIDE_REAL(a,b) MATH_Fast_Divide(a, b)
 #define MEMSET_REAL memsetasm
-#define MEMCPY_REAL memcpy6
+#define MEMCPY_REAL bit64_sq_cpy
+
+#define SUPER_MEMCPY_REAL bit64_sq_cpy
+
+#define FMAC(a, b, c) MATH_fmac(a,b,c)
+#define FMAC_DEC(a, b, c) MATH_fmac_Dec(a,b,c)
 
 
 #endif

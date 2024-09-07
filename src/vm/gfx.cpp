@@ -23,7 +23,7 @@ void Font::load()
   {
     const size_t row = DIVIDE_REAL(i, BYTES_PER_ROW);
     const size_t col = i % FONT_GLYPHS_COLUMNS;
-    const size_t index = row * FONT_GLYPHS_COLUMNS + col;
+    const size_t index = FMAC(row , FONT_GLYPHS_COLUMNS , col);
     const size_t y = DIVIDE_REAL((i - (row * BYTES_PER_ROW)), FONT_GLYPHS_COLUMNS);
 
     const auto byte = font_map[i];

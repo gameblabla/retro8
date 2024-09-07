@@ -10,10 +10,29 @@
 #include <cstring>
 #include <stdint.h>
 #include <kos.h>
+#include <kos/malloc.h>
 #include <SDL/SDL.h>
 #include <dc/pvr.h>
 #include <dc/maple.h>
 #include <dc/maple/controller.h>
+
+#define _8BPP 1
+
+#define FRAMEBUFFER_WIDTH 128
+#define FRAMEBUFFER_HEIGHT 128
+
+//Here we define the size of a framebuffer texture we want
+#define FRAMEBUFFER_PIXELS (FRAMEBUFFER_WIDTH * FRAMEBUFFER_HEIGHT)
+
+//The codebook for a VQ texture is always 2048 bytes
+#define CODEBOOK_SIZE 2048
+
+typedef struct {
+	unsigned char codebook[CODEBOOK_SIZE];
+	unsigned char texture[FRAMEBUFFER_PIXELS];
+} VQ_Texture;
+
+VQ_Texture* framebuffer;
 
 namespace r8 = retro8;
 using pixel_t =
@@ -37,6 +56,10 @@ r8::input::InputManager input;
 r8::gfx::ColorTable colorTable;
 
 static unsigned start = timer_ms_gettime64();
+
+unsigned char* codebook;
+uint16_t* codebookEntry;
+uint32_t codebookIdx;
 
 #ifdef _8BPP
 
@@ -78,10 +101,24 @@ static void Set_Pal_col(uint8_t r, uint8_t g, uint8_t b, uint16_t entry)
 	#else
 	pal_rgb[entry] = PACK_RGB565(r,g,b);
 	#endif
-	for(i=0;i<16;i++)
-	{
-		pvr_set_pal_entry(entry+(16*i), pal_rgb[entry]);
-	}
+	
+	codebookEntry = (uint16_t*)codebook;
+
+    // Store the packed color value as a 16-bit (2-byte) entry
+    uint16_t codebookValue = (((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
+
+    // Now fill the codebook for this color
+    for (i = 0; i < 16; i++) 
+    {
+        // Calculate the index for the codebook entry
+        int32_t codebookIdx = (entry + (16 * i)) * 4;  // Each entry is 4 16-bit values
+
+        // Fill all four pixels of the codebook entry with the same color value
+        codebookEntry[codebookIdx + 0] = codebookValue;
+        codebookEntry[codebookIdx + 1] = codebookValue;
+        codebookEntry[codebookIdx + 2] = codebookValue;
+        codebookEntry[codebookIdx + 3] = codebookValue;
+    }
 }
 
 void Set_palette(void)
@@ -116,7 +153,7 @@ pvr_ptr_t front_tex;
 void back_init()
 {
 #ifdef _8BPP
-    front_tex = pvr_mem_malloc(128*128);
+    front_tex = pvr_mem_malloc(sizeof(VQ_Texture));
 #else
     front_tex = pvr_mem_malloc(128*128*2);
 #endif
@@ -139,81 +176,54 @@ void draw_back()
 {
 	pvr_poly_cxt_t cxt;
     pvr_poly_hdr_t hdr;
-    pvr_vertex_t* vert;
+    pvr_vertex_t vert;
 #ifdef _8BPP
-	// This is much slower because of the fact it has to be twiddled
-	uint_fast8_t x, y;
-	uint16 *vtex = (uint16*)front_tex;
-	for (y=0; y<128; y += 2)
-	{
-		for (x=0; x<128; x++)
-		{
-			uint_fast32_t tmp = MATH_Fast_Divide(y&127, 2);
-			uint_fast32_t x_ = MATH_Fast_Divide(x, 128);
-			uint_fast32_t y_ = MATH_Fast_Divide(y, 128);
-			vtex[TWIDOUT(tmp, x&127) + (x_ + y_)*128*128/2] = mem[y*128+x] | (mem[(y+1)*128+x]<<8);
-		}
-	}
-	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_PAL8BPP| PVR_TXRFMT_8BPP_PAL(0)|PVR_TXRFMT_TWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_NONE);
+	pvr_poly_cxt_col(&cxt, PVR_LIST_OP_POLY);
+	
+	pvr_txr_load(framebuffer, front_tex, sizeof(VQ_Texture));
+	
+	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565 | PVR_TXRFMT_VQ_ENABLE | PVR_TXRFMT_NONTWIDDLED, FRAMEBUFFER_WIDTH * 4, FRAMEBUFFER_HEIGHT, front_tex, PVR_FILTER_BILINEAR);
 #else
 	dcache_inval_range((ptr_t)(mem), 128 * 128 * 2);
 	pvr_txr_load_dma(mem, front_tex, 128*128*2, 1, NULL, 0);
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565|PVR_TXRFMT_NONTWIDDLED|PVR_TXRFMT_NOSTRIDE|PVR_TXRFMT_VQ_DISABLE, 128, 128, front_tex, PVR_FILTER_NONE);
 #endif
 
-    pvr_dr_state_t dr_state;
-    
     pvr_poly_compile(&hdr, &cxt);
     pvr_prim(&hdr, sizeof(hdr));
-    pvr_dr_init(&dr_state);
 
-    // Vertex 1
-    vert = pvr_dr_target(dr_state);
-    vert->argb = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
-    vert->oargb = 0;
-    vert->flags = PVR_CMD_VERTEX;
-    vert->x = 80;
-    vert->y = 1;
-    vert->z = 1;
-    vert->u = 0.0f;
-    vert->v = 0.0f;
-    pvr_dr_commit(vert);
-
-    // Vertex 2
-    vert = pvr_dr_target(dr_state);
-    vert->argb = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
-    vert->oargb = 0;
-    vert->flags = PVR_CMD_VERTEX;
-    vert->x = 560;
-    vert->y = 1;
-    vert->z = 1;
-    vert->u = 1.0;
-    vert->v = 0.0f;
-    pvr_dr_commit(vert);
-
-    // Vertex 3
-    vert = pvr_dr_target(dr_state);
-    vert->argb = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
-    vert->oargb = 0;
-    vert->flags = PVR_CMD_VERTEX;
-    vert->x = 80;
-    vert->y = 480;
-    vert->z = 1;
-    vert->u = 0.0f;
-    vert->v = 1.0;
-    pvr_dr_commit(vert);
-
-    // Vertex 4
-    vert = pvr_dr_target(dr_state);
-    vert->argb = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
-    vert->oargb = 0;
-    vert->flags = PVR_CMD_VERTEX_EOL;
-    vert->x = 560;
-    vert->y = 480;
-    vert->z = 1;
-    vert->u = 1.0;
-    vert->v = 1.0;
-    pvr_dr_commit(vert);
+    vert.argb = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);    
+    vert.oargb = 0;
+    vert.flags = PVR_CMD_VERTEX;
+    
+    vert.x = 80;
+    vert.y = 1;
+    vert.z = 1;
+    vert.u = 0.0;
+    vert.v = 0.0;
+    pvr_prim(&vert, sizeof(vert));
+    
+    vert.x = 560;
+    vert.y = 1;
+    vert.z = 1;
+    vert.u = 1.0;
+    vert.v = 0.0;
+    pvr_prim(&vert, sizeof(vert));
+    
+    vert.x = 80;
+    vert.y = 480;
+    vert.z = 1;
+    vert.u = 0.0;
+    vert.v = 1.0;
+    pvr_prim(&vert, sizeof(vert));
+    
+    vert.x = 560;
+    vert.y = 480;
+    vert.z = 1;
+    vert.u = 1.0;
+    vert.v = 1.0;
+    vert.flags = PVR_CMD_VERTEX_EOL;
+    pvr_prim(&vert, sizeof(vert));
 }
 
 
@@ -223,7 +233,9 @@ void draw_frame()
     pvr_wait_ready();
     pvr_scene_begin();
 
-    pvr_list_begin(PVR_LIST_OP_POLY);
+	pvr_list_begin(PVR_LIST_OP_POLY);
+
+	
 
     draw_back();
 
@@ -235,19 +247,12 @@ void draw_frame()
 
 void pvr_setup()
 {
-	pvr_init_params_t params = {
-		/* Enable Opaque, Translucent, and Punch-Thru polygons with binsize 16 */
-		{ PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_16, PVR_BINSIZE_0,
-		PVR_BINSIZE_16 },
-		
+	pvr_init_params_t params =  {
+		/* Enable opaque and translucent polygons with size 16 */
+		{ PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_0 },
+
 		/* Vertex buffer size 512K */
-		512*1024,
-		
-		0, // Disable Vertex DMA
-		
-		0, // Disable FSAA, it doesn't really look better with Pico-8 and the integer scaling being used
-		
-		0
+		512 * 1024
 	};
 
     /* init kos  */
@@ -347,25 +352,33 @@ bool load_game(char* rom_name)
 
 	snd_stream_hnd_t snd_dc = -1;
 
-#ifdef SDL_SOUND_DC
-void audio_callback(void* data, uint8_t* cbuffer, int length)
-{
-	retro8::sfx::APU* apu = static_cast<retro8::sfx::APU*>(data);
-	int16_t* buffer = reinterpret_cast<int16_t*>(cbuffer);
-	apu->renderSounds(buffer, length /  sizeof(int16_t));
-	return;
-}
-#else
+
 int length = 1;
 const int SAMPLES_PER_FRAME = SAMPLE_RATE / 60;
-static int16_t sound_buffer[SAMPLE_RATE * 2];
-static void *sound_callback(snd_stream_hnd_t hnd, int len, int *samples_returned)
-{
-	length = len;
-	machine.sound().renderSounds(sound_buffer, length /  sizeof(int16_t));
-	return (int16_t *)(sound_buffer);
+static int16_t* sound_buffer;
+static unsigned buffer_frames;
+static unsigned buffer_size;
+static kthread_t *sound_thread;
+static int sound_init = 0;
+
+// `smp_req` and `smp_recv` are actually BYTES, not samples.
+static void *sound_callback(snd_stream_hnd_t hnd, int smp_req, int *smp_recv) {
+
+    // Calculate the number of frames requested
+    size_t frames = MAX_REAL(0, smp_req) / (sizeof(int16_t) * 1); // `len` is in bytes, convert to frames
+
+    // Ensure that we do not exceed the buffer's capacity
+    if (frames > buffer_frames)
+        frames = buffer_frames;
+
+	machine.sound().renderSounds(sound_buffer, frames * sizeof(int16_t) * 1);
+
+    // Set the number of samples returned (in bytes)
+    *smp_recv = frames * sizeof(int16_t) * 1; // Convert frames back to bytes
+
+    // Return the buffer containing the decoded audio data
+    return sound_buffer;
 }
-#endif
 
 uint_fast8_t retro_run()
 {
@@ -429,14 +442,38 @@ uint_fast8_t retro_run()
 	flip_screen();
 	input.manageKeyRepeat();
 	
-	#ifdef SDL_SOUND_DC
-	
-	#else
-	snd_stream_poll(snd_dc); 
-	#endif
 	
 	return 1;
 }
+
+
+static void *dc_audio_thread(void *dud)
+{
+    snd_stream_init();
+
+    buffer_frames = 2048;
+    buffer_size = buffer_frames * sizeof(int16_t) * 1;
+    
+    sound_buffer = (int16_t*)malloc(buffer_size);
+    snd_dc = snd_stream_alloc(sound_callback, buffer_size);
+    snd_stream_start(snd_dc, 44100, 0);
+    
+    sound_init = 1;
+	
+	while(1)
+	{
+		snd_stream_poll(snd_dc);
+		thd_sleep(10);
+	}
+
+  snd_stream_destroy(snd_dc);
+  snd_stream_shutdown();
+
+  free(sound_buffer);
+
+  return NULL;
+}
+
 
   
 int main(int argc, char* argv[])
@@ -449,27 +486,20 @@ int main(int argc, char* argv[])
 	#else
 	pvr_set_pal_format(PVR_PAL_RGB565);
 	#endif
-	mem = (pixel_t*)memalign(32, (128 * 128));
+	
+
+	// Initialize VQ Texture First - align on a 64 byte boundary so it's storage queue movable
+	framebuffer = (VQ_Texture*)aligned_alloc(64, sizeof(VQ_Texture));
+	
+	codebook = (unsigned char*)&(framebuffer -> codebook);
+	
+	mem = (unsigned char*)&(framebuffer -> texture);
+	//mem = (pixel_t*)aligned_alloc(64, (128 * 128));
 	Set_palette();
 #else
 	pvr_set_pal_format(PVR_PAL_RGB565);
-	mem = (pixel_t*)memalign(32, (128 * 128) * 2);
+	mem = (pixel_t*)aligned_alloc(32, (128 * 128) * 2);
 #endif
-
-	/* TODO : Get rid of SDL dependency for Sound */
-	#ifdef SDL_SOUND_DC
-	SDL_Init(SDL_INIT_AUDIO);
-	SDL_AudioSpec wantSpec, spec;
-	wantSpec.freq = 44100;
-	wantSpec.format = AUDIO_S16SYS;
-	wantSpec.channels = 1;
-	wantSpec.samples = 2048;
-	wantSpec.userdata = &machine.sound();
-	wantSpec.callback = audio_callback;
-
-	SDL_OpenAudio(&wantSpec, &spec);
-	SDL_PauseAudio(0);
-	#endif
 
 	printf("Initializing audio buffer of %zu bytes\n", sizeof(int16_t) * SAMPLE_RATE * 2);
 
@@ -490,21 +520,18 @@ int main(int argc, char* argv[])
 		printf("Could not load game '%s'!\n", argv[1]);
 		return 0;
 	}
-	#ifndef SDL_SOUND_DC
-    snd_stream_init();
-    snd_dc = snd_stream_alloc(sound_callback, SND_STREAM_BUFFER_MAX);
-	snd_stream_start(snd_dc,44100, 0);
-	snd_stream_set_callback(snd_dc, sound_callback);
-	#endif
+
+	sound_init = 0;
+    sound_thread = thd_create(0, dc_audio_thread, NULL);
+    while(sound_init == 0)
+    {
+		
+	}
 		
 	while(while_res)
 	{
 		while_res = retro_run();
 	}
-	#ifdef SDL_SOUND_DC
-	SDL_PauseAudio(1);
-	SDL_Quit();
-	#endif
 	
 		
 	return 0;
